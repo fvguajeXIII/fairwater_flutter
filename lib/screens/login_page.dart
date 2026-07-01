@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../services/auth_service.dart';
 
 // ─── Color palette ───────────────────────────────────────────────────────────
 
@@ -157,9 +160,11 @@ class _LoginSheet extends StatefulWidget {
 
 class _LoginSheetState extends State<_LoginSheet> {
   final _formKey = GlobalKey<FormState>();
+  final AuthService _authService = AuthService();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscure = true;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -168,13 +173,37 @@ class _LoginSheetState extends State<_LoginSheet> {
     super.dispose();
   }
 
-  void _login() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // TODO: real authentication
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login eseguito (placeholder)')),
+  Future<void> _login() async {
+    if (!(_formKey.currentState?.validate() ?? false) || _isSubmitting) {
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await _authService.signInWithEmailAndPassword(
+        email: _emailCtrl.text,
+        password: _passCtrl.text,
       );
+
+      if (!mounted) return;
       Navigator.pop(context);
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_firebaseLoginMessage(e))));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Accesso non riuscito. Riprova tra qualche istante.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -298,7 +327,7 @@ class _LoginSheetState extends State<_LoginSheet> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _login,
+                onPressed: _isSubmitting ? null : _login,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kPrimary,
                   foregroundColor: Colors.white,
@@ -308,10 +337,24 @@ class _LoginSheetState extends State<_LoginSheet> {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Accedi',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : const Text(
+                        'Accedi',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 28),
@@ -403,6 +446,7 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
+  final AuthService _authService = AuthService();
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -412,6 +456,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _phoneCtrl = TextEditingController();
   final _referralCtrl = TextEditingController();
   bool _obscure = true;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -426,13 +471,47 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  void _register() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // TODO: call your registration backend here
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registrazione completata (placeholder)')),
+  Future<void> _register() async {
+    if (!(_formKey.currentState?.validate() ?? false) || _isSubmitting) {
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await _authService.registerWithProfile(
+        firstName: _firstNameCtrl.text,
+        lastName: _lastNameCtrl.text,
+        email: _emailCtrl.text,
+        password: _passCtrl.text,
+        residence: _residenceCtrl.text,
+        phone: _phoneCtrl.text,
+        referralCode: _referralCtrl.text,
       );
+
+      if (!mounted) return;
       Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registrazione completata con successo.')),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_firebaseRegisterMessage(e))));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Registrazione non riuscita. Controlla la connessione e riprova.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -639,7 +718,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _register,
+                        onPressed: _isSubmitting ? null : _register,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _kPrimary,
                           foregroundColor: Colors.white,
@@ -649,13 +728,24 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                           elevation: 0,
                         ),
-                        child: const Text(
-                          'Crea account',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Crea account',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -678,3 +768,37 @@ Widget _sectionLabel(String text) => Text(
     letterSpacing: 0.5,
   ),
 );
+
+String _firebaseLoginMessage(FirebaseAuthException exception) {
+  switch (exception.code) {
+    case 'invalid-email':
+      return 'L indirizzo email non e valido.';
+    case 'invalid-credential':
+    case 'wrong-password':
+    case 'user-not-found':
+      return 'Email o password non corretti.';
+    case 'user-disabled':
+      return 'Questo account e stato disabilitato.';
+    case 'too-many-requests':
+      return 'Troppi tentativi. Riprova piu tardi.';
+    case 'network-request-failed':
+      return 'Connessione assente o instabile.';
+    default:
+      return exception.message ?? 'Accesso non riuscito.';
+  }
+}
+
+String _firebaseRegisterMessage(FirebaseAuthException exception) {
+  switch (exception.code) {
+    case 'email-already-in-use':
+      return 'Questa email e gia registrata.';
+    case 'invalid-email':
+      return 'L indirizzo email non e valido.';
+    case 'weak-password':
+      return 'La password e troppo debole.';
+    case 'network-request-failed':
+      return 'Connessione assente o instabile.';
+    default:
+      return exception.message ?? 'Registrazione non riuscita.';
+  }
+}

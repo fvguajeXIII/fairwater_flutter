@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/auth_service.dart';
 import '../services/bar_service.dart';
@@ -553,68 +555,83 @@ class _BarCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_kPrimary, _kPrimaryDark],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [_kPrimary, _kPrimaryDark],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Icon(
+                  Icons.local_cafe_rounded,
+                  color: Colors.white,
+                ),
               ),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Icon(
-              Icons.local_cafe_rounded,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        view.bar.name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF16324F),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            view.bar.name,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF16324F),
+                            ),
+                          ),
                         ),
+                        _DistanceBadge(distance: view.distanceLabel),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _buildAddress(view.bar),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.blueGrey.shade600,
                       ),
                     ),
-                    _DistanceBadge(distance: view.distanceLabel),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  _buildAddress(view.bar),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.blueGrey.shade600,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _InfoChip(
-                      icon: Icons.water_drop_outlined,
-                      label: view.bar.refillInfo,
-                    ),
-                    const SizedBox(width: 8),
-                    _InfoChip(
-                      icon: Icons.schedule_rounded,
-                      label: view.bar.openInfo,
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _InfoChip(
+                          icon: Icons.water_drop_outlined,
+                          label: view.bar.refillInfo,
+                        ),
+                        _InfoChip(
+                          icon: Icons.schedule_rounded,
+                          label: view.bar.openInfo,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _openNavigation(context, view),
+              icon: const Icon(Icons.navigation_rounded),
+              label: const Text('Avvia navigazione'),
             ),
           ),
         ],
@@ -745,4 +762,41 @@ String _buildAddress(BarSpot bar) {
   }
 
   return parts.join(', ');
+}
+
+Future<void> _openNavigation(
+  BuildContext context,
+  _NearbyBarView view,
+) async {
+  final destinationLabel = Uri.encodeComponent(view.bar.name);
+  final latitude = view.location.latitude;
+  final longitude = view.location.longitude;
+
+  final candidateUris = <Uri>[
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+      Uri.parse('geo:0,0?q=$latitude,$longitude($destinationLabel)'),
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+      Uri.parse(
+        'http://maps.apple.com/?daddr=$latitude,$longitude&q=$destinationLabel',
+      ),
+    Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=$latitude,$longitude&travelmode=walking',
+    ),
+  ];
+
+  for (final uri in candidateUris) {
+    if (await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      return;
+    }
+  }
+
+  if (!context.mounted) {
+    return;
+  }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Nessuna app di navigazione disponibile sul dispositivo.'),
+    ),
+  );
 }
