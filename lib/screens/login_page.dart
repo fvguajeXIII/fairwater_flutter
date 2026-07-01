@@ -1,4 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../services/auth_service.dart';
 
 // ─── Color palette ───────────────────────────────────────────────────────────
 
@@ -159,7 +164,9 @@ class _LoginSheetState extends State<_LoginSheet> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _authService = AuthService();
   bool _obscure = true;
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -168,13 +175,29 @@ class _LoginSheetState extends State<_LoginSheet> {
     super.dispose();
   }
 
-  void _login() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // TODO: real authentication
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login eseguito (placeholder)')),
+  Future<void> _login() async {
+    if (_loading || !(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      await _authService.signInWithEmailAndPassword(
+        email: _emailCtrl.text,
+        password: _passCtrl.text,
       );
+      if (!mounted) return;
       Navigator.pop(context);
+    } on FirebaseAuthException catch (e) {
+      _showError(_firebaseMessage(e));
+    } on TimeoutException {
+      _showError('La richiesta ha impiegato troppo tempo. Controlla la connessione.');
+    } catch (_) {
+      _showError('Accesso non riuscito. Controlla rete e credenziali.');
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -182,6 +205,31 @@ class _LoginSheetState extends State<_LoginSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Social login: $provider (placeholder)')),
     );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  String _firebaseMessage(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-email':
+        return 'Email non valida.';
+      case 'user-disabled':
+        return 'Questo account è stato disabilitato.';
+      case 'user-not-found':
+        return 'Account non trovato.';
+      case 'wrong-password':
+        return 'Password errata.';
+      case 'invalid-credential':
+        return 'Credenziali non valide.';
+      case 'too-many-requests':
+        return 'Troppi tentativi, riprova più tardi.';
+      default:
+        return e.message ?? 'Login non riuscito.';
+    }
   }
 
   @override
@@ -296,7 +344,7 @@ class _LoginSheetState extends State<_LoginSheet> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _login,
+                onPressed: _loading ? null : _login,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kPrimary,
                   foregroundColor: Colors.white,
@@ -306,10 +354,22 @@ class _LoginSheetState extends State<_LoginSheet> {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Accedi',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+                child: _loading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Accedi',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 28),
@@ -401,6 +461,7 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
+  final _authService = AuthService();
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -410,6 +471,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _phoneCtrl = TextEditingController();
   final _referralCtrl = TextEditingController();
   bool _obscure = true;
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -424,13 +486,57 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  void _register() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // TODO: call your registration backend here
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registrazione completata (placeholder)')),
+  Future<void> _register() async {
+    if (_loading || !(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      await _authService.registerWithProfile(
+        firstName: _firstNameCtrl.text,
+        lastName: _lastNameCtrl.text,
+        email: _emailCtrl.text,
+        password: _passCtrl.text,
+        residence: _residenceCtrl.text,
+        phone: _phoneCtrl.text.isEmpty ? null : _phoneCtrl.text,
+        referralCode:
+            _referralCtrl.text.isEmpty ? null : _referralCtrl.text,
       );
-      Navigator.of(context).pop();
+
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } on FirebaseAuthException catch (e) {
+      _showError(_firebaseMessage(e));
+    } on TimeoutException {
+      _showError('Registrazione troppo lenta. Controlla rete e configurazione Firebase.');
+    } catch (_) {
+      _showError('Registrazione non riuscita. Riprova tra poco.');
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  String _firebaseMessage(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'email-already-in-use':
+        return 'Questa email è già registrata.';
+      case 'invalid-email':
+        return 'Email non valida.';
+      case 'weak-password':
+        return 'Password troppo debole.';
+      case 'operation-not-allowed':
+        return 'Accesso non abilitato per questo progetto Firebase.';
+      default:
+        return e.message ?? 'Registrazione non riuscita.';
     }
   }
 
@@ -629,7 +735,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _register,
+                        onPressed: _loading ? null : _register,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _kPrimary,
                           foregroundColor: Colors.white,
@@ -639,13 +745,22 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                           elevation: 0,
                         ),
-                        child: const Text(
-                          'Crea account',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: _loading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Crea account',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
                   ],

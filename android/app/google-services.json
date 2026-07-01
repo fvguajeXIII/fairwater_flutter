@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "574931919668",
+    "firebase_url": "https://fairwater-app-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "fairwater-app",
+    "storage_bucket": "fairwater-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:574931919668:android:de8a3f93bdac840c963b61",
+        "android_client_info": {
+          "package_name": "app.vercel.fairwater"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKigg1OVq8YOuHy7-Sf4-cibXao8BQMsU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:574931919668:android:a0dc4f14c68de31b963b61",
+        "android_client_info": {
+          "package_name": "com.example.fairwater"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKigg1OVq8YOuHy7-Sf4-cibXao8BQMsU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
