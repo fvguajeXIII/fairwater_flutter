@@ -1,11 +1,10 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../services/auth_service.dart';
+import '../services/bar_service.dart';
 
 const Color _kPrimary = Color(0xFF1E73C6);
 const Color _kPrimaryDark = Color(0xFF154F91);
@@ -19,9 +18,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const _fallbackCenter = LatLng(41.9028, 12.4964);
-
   final AuthService _authService = AuthService();
+  final BarService _barService = BarService();
   final MapController _mapController = MapController();
 
   Position? _position;
@@ -29,11 +27,28 @@ class _HomePageState extends State<HomePage> {
   bool _loadingLocation = true;
   bool _mapReady = false;
   LatLng? _pendingMapCenter;
+  bool _seedingBars = false;
 
   @override
   void initState() {
     super.initState();
+    _seedBarsIfNeeded();
     _loadLocation();
+  }
+
+  Future<void> _seedBarsIfNeeded() async {
+    if (_seedingBars) {
+      return;
+    }
+
+    _seedingBars = true;
+    try {
+      await _barService.ensureSeedData();
+    } catch (_) {
+      // If Firestore rules block writes, the live stream can still render data.
+    } finally {
+      _seedingBars = false;
+    }
   }
 
   Future<void> _loadLocation() async {
@@ -96,34 +111,9 @@ class _HomePageState extends State<HomePage> {
   LatLng get _currentLatLng {
     final position = _position;
     if (position == null) {
-      return _fallbackCenter;
+      return const LatLng(41.2879, 13.2490);
     }
     return LatLng(position.latitude, position.longitude);
-  }
-
-  List<_NearbyBarView> get _nearbyBars {
-    final center = _currentLatLng;
-    final bars = _bars.map((bar) {
-      final location = _offsetLatLng(
-        center,
-        bar.northMeters,
-        bar.eastMeters,
-      );
-      final distanceMeters = Geolocator.distanceBetween(
-        center.latitude,
-        center.longitude,
-        location.latitude,
-        location.longitude,
-      );
-      return _NearbyBarView(
-        bar: bar,
-        location: location,
-        distanceMeters: distanceMeters,
-      );
-    }).toList();
-
-    bars.sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
-    return bars;
   }
 
   void _queueMapMove(LatLng center) {
@@ -135,6 +125,28 @@ class _HomePageState extends State<HomePage> {
     _mapController.move(center, 14.8);
   }
 
+  List<_NearbyBarView> _nearbyBars(List<BarSpot> bars) {
+    final center = _currentLatLng;
+    final nearbyBars = bars
+        .map((bar) {
+          final distanceMeters = Geolocator.distanceBetween(
+            center.latitude,
+            center.longitude,
+            bar.location.latitude,
+            bar.location.longitude,
+          );
+          return _NearbyBarView(
+            bar: bar,
+            location: bar.location,
+            distanceMeters: distanceMeters,
+          );
+        })
+        .toList()
+      ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
+
+    return nearbyBars;
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = _authService.currentUser;
@@ -143,173 +155,151 @@ class _HomePageState extends State<HomePage> {
         ? 'Benvenuto'
         : displayName.split(' ').first;
 
-    final nearbyBars = _nearbyBars;
+    return StreamBuilder<List<BarSpot>>(
+      stream: _barService.watchBars(),
+      builder: (context, snapshot) {
+        final bars = snapshot.data ?? const <BarSpot>[];
+        final nearbyBars = _nearbyBars(bars);
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFEAF4FF), _kSurface],
-          ),
-        ),
-        child: SafeArea(
-          child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [_kPrimary, _kPrimaryDark],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+        return Scaffold(
+          extendBodyBehindAppBar: true,
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFEAF4FF), _kSurface],
+              ),
+            ),
+            child: SafeArea(
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [_kPrimary, _kPrimaryDark],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              Icons.water_drop_rounded,
+                              color: Colors.white,
+                            ),
                           ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(
-                          Icons.water_drop_rounded,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '$firstName, trova un refill',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF16324F),
-                              ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$firstName, trova un refill',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF16324F),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Mappa reale, geolocalizzazione attiva e bar affiliati nelle vicinanze.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.blueGrey.shade600,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Mappa reale, geolocalizzazione attiva e bar affiliati nelle vicinanze.',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.blueGrey.shade600,
-                              ),
+                          ),
+                          const SizedBox(width: 12),
+                          _LogoutButton(onPressed: () => _authService.signOut()),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 4)),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _LiveMapCard(
+                        loading: _loadingLocation,
+                        locationError: _locationError,
+                        currentCenter: _currentLatLng,
+                        bars: nearbyBars,
+                        mapController: _mapController,
+                        onRefreshLocation: _loadLocation,
+                        onMapReady: () {
+                          if (!mounted) return;
+                          setState(() {
+                            _mapReady = true;
+                          });
+                          final pendingCenter = _pendingMapCenter;
+                          if (pendingCenter != null) {
+                            _pendingMapCenter = null;
+                            _queueMapMove(pendingCenter);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 18)),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Bar affiliati',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF16324F),
                             ),
-                          ],
-                        ),
+                          ),
+                          Text(
+                            'Ordinati per distanza',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blueGrey.shade500,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      _LogoutButton(onPressed: () => _authService.signOut()),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 4)),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _LiveMapCard(
-                    loading: _loadingLocation,
-                    locationError: _locationError,
-                    currentCenter: _currentLatLng,
-                    bars: nearbyBars,
-                    mapController: _mapController,
-                    onRefreshLocation: _loadLocation,
-                    onMapReady: () {
-                      if (!mounted) return;
-                      setState(() {
-                        _mapReady = true;
-                      });
-                      final pendingCenter = _pendingMapCenter;
-                      if (pendingCenter != null) {
-                        _pendingMapCenter = null;
-                        _queueMapMove(pendingCenter);
-                      }
-                    },
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 16)),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.my_location_rounded,
-                          label: 'Posizione',
-                          value: _position == null ? 'Fallback' : 'Attiva',
-                          caption: _position == null
-                              ? 'In attesa permesso'
-                              : 'GPS rilevato',
-                        ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          if (index.isOdd) {
+                            return const SizedBox(height: 12);
+                          }
+                          final view = nearbyBars[index ~/ 2];
+                          return _BarCard(view: view);
+                        },
+                        childCount:
+                            nearbyBars.isEmpty ? 0 : nearbyBars.length * 2 - 1,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.local_cafe_rounded,
-                          label: 'Bar vicini',
-                          value: '${nearbyBars.length}',
-                          caption: 'in elenco',
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 22)),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Bar affiliati',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF16324F),
-                        ),
-                      ),
-                      Text(
-                        'Ordinati per distanza',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.blueGrey.shade500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 12)),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      if (index.isOdd) {
-                        return const SizedBox(height: 12);
-                      }
-                      final view = nearbyBars[index ~/ 2];
-                      return _BarCard(view: view);
-                    },
-                    childCount: nearbyBars.isEmpty ? 0 : nearbyBars.length * 2 - 1,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -335,9 +325,6 @@ class _LiveMapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPermanentPermissionError =
-        locationError?.contains('permanente') ?? false;
-
     return Container(
       height: 420,
       decoration: BoxDecoration(
@@ -396,51 +383,10 @@ class _LiveMapCard extends StatelessWidget {
             ),
             Positioned(
               top: 18,
-              left: 18,
-              child: _LocationPill(
-                icon: Icons.gps_fixed_rounded,
-                label: loading
-                    ? 'Geolocalizzazione in corso'
-                    : locationError == null
-                        ? 'Geolocalizzazione attiva'
-                        : 'Geolocalizzazione limitata',
-                  accent: locationError == null ? _kPrimaryDark : Colors.deepOrange,
-              ),
-            ),
-            Positioned(
-              top: 18,
               right: 18,
               child: _RoundActionButton(
                 icon: Icons.my_location_rounded,
                 onTap: onRefreshLocation,
-              ),
-            ),
-            if (locationError != null)
-              Positioned(
-                left: 18,
-                right: 18,
-                bottom: 84,
-                child: _MapMessageCard(
-                  title: 'Permesso posizione non disponibile',
-                  subtitle: locationError!,
-                  actionLabel: isPermanentPermissionError
-                      ? 'Impostazioni'
-                      : 'Riprova',
-                  onAction: isPermanentPermissionError
-                      ? () => Geolocator.openAppSettings()
-                      : onRefreshLocation,
-                ),
-              ),
-            Positioned(
-              left: 18,
-              right: 18,
-              bottom: 18,
-              child: _MapFooterCard(
-                title: loading ? 'Recupero posizione' : 'Posizione rilevata',
-                subtitle: loading
-                    ? 'Sto leggendo il GPS del dispositivo'
-                    : 'Bar e refill ordinati dalla tua posizione attuale',
-                trailing: locationError == null ? 'Aggiornata ora' : 'Fallback attivo',
               ),
             ),
             if (loading)
@@ -450,44 +396,6 @@ class _LiveMapCard extends StatelessWidget {
               ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _LocationPill extends StatelessWidget {
-  const _LocationPill({
-    required this.icon,
-    required this.label,
-    required this.accent,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.90),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18, color: accent),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF16324F),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -512,144 +420,6 @@ class _RoundActionButton extends StatelessWidget {
           height: 48,
           child: Icon(icon, color: _kPrimary),
         ),
-      ),
-    );
-  }
-}
-
-class _MapMessageCard extends StatelessWidget {
-  const _MapMessageCard({
-    required this.title,
-    required this.subtitle,
-    required this.actionLabel,
-    required this.onAction,
-  });
-
-  final String title;
-  final String subtitle;
-  final String actionLabel;
-  final VoidCallback onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE5EEF8)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF3E8),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(Icons.location_off_rounded, color: Colors.deepOrange),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF16324F),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.blueGrey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: onAction,
-            child: Text(actionLabel),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MapFooterCard extends StatelessWidget {
-  const _MapFooterCard({
-    required this.title,
-    required this.subtitle,
-    required this.trailing,
-  });
-
-  final String title;
-  final String subtitle;
-  final String trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEAF4FF),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.location_on_rounded,
-              color: _kPrimary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF16324F),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.blueGrey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            trailing,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: _kPrimaryDark,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -763,84 +533,6 @@ class _MapBarMarker extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.caption,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final String caption;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEAF4FF),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: _kPrimary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.blueGrey.shade500,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF16324F),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  caption,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.blueGrey.shade500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _BarCard extends StatelessWidget {
   const _BarCard({required this.view});
 
@@ -902,7 +594,7 @@ class _BarCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  view.bar.address,
+                  _buildAddress(view.bar),
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.blueGrey.shade600,
@@ -1012,26 +704,6 @@ class _LogoutButton extends StatelessWidget {
   }
 }
 
-class _BarSpot {
-  const _BarSpot({
-    required this.name,
-    required this.address,
-    required this.refillInfo,
-    required this.openInfo,
-    required this.northMeters,
-    required this.eastMeters,
-    required this.featured,
-  });
-
-  final String name;
-  final String address;
-  final String refillInfo;
-  final String openInfo;
-  final double northMeters;
-  final double eastMeters;
-  final bool featured;
-}
-
 class _NearbyBarView {
   const _NearbyBarView({
     required this.bar,
@@ -1039,7 +711,7 @@ class _NearbyBarView {
     required this.distanceMeters,
   });
 
-  final _BarSpot bar;
+  final BarSpot bar;
   final LatLng location;
   final double distanceMeters;
 
@@ -1055,13 +727,6 @@ class _LocationException implements Exception {
   String toString() => message;
 }
 
-LatLng _offsetLatLng(LatLng origin, double northMeters, double eastMeters) {
-  final lat = origin.latitude + (northMeters / 111320.0);
-  final lon = origin.longitude +
-      (eastMeters / (111320.0 * math.cos(origin.latitude * math.pi / 180.0)));
-  return LatLng(lat, lon);
-}
-
 String _formatDistance(double meters) {
   if (meters < 1000) {
     return '${meters.round()} m';
@@ -1069,41 +734,15 @@ String _formatDistance(double meters) {
   return '${(meters / 1000).toStringAsFixed(1)} km';
 }
 
-const List<_BarSpot> _bars = [
-  _BarSpot(
-    name: 'Caffe Centrale',
-    address: 'Via Roma 18, centro citta',
-    refillInfo: 'Refill attivo',
-    openInfo: 'Aperto fino alle 22:00',
-    northMeters: 180,
-    eastMeters: 60,
-    featured: true,
-  ),
-  _BarSpot(
-    name: 'Bar del Corso',
-    address: 'Corso Vittorio 42, zona stazione',
-    refillInfo: '2 punti refill',
-    openInfo: 'Aperto fino alle 20:30',
-    northMeters: -260,
-    eastMeters: 310,
-    featured: false,
-  ),
-  _BarSpot(
-    name: 'Lounge Drink',
-    address: 'Piazza Italia 7, quartiere sud',
-    refillInfo: 'Refill premium',
-    openInfo: 'Aperto fino alle 23:00',
-    northMeters: 420,
-    eastMeters: -140,
-    featured: false,
-  ),
-  _BarSpot(
-    name: 'Bistro Verde',
-    address: 'Via del Porto 11, lungomare',
-    refillInfo: 'Copertura completa',
-    openInfo: 'Aperto fino alle 21:00',
-    northMeters: -780,
-    eastMeters: -220,
-    featured: false,
-  ),
-];
+String _buildAddress(BarSpot bar) {
+  final parts = <String>[
+    if (bar.address.isNotEmpty) bar.address,
+    if (bar.city.isNotEmpty) bar.city,
+  ];
+
+  if (parts.isEmpty) {
+    return 'Indirizzo non disponibile';
+  }
+
+  return parts.join(', ');
+}
