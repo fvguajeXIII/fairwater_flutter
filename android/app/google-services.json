@@ -13,7 +13,20 @@
           "package_name": "app.vercel.fairwater"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "574931919668-q57khpg12dakcr9irsghg16rdq5nb820.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.vercel.fairwater",
+            "certificate_hash": "f70ad51aa428fc8fc81820a199cf990cc1c87a30"
+          }
+        },
+        {
+          "client_id": "574931919668-uirgob0ok1cqume08u5n61ah79b03mek.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDKigg1OVq8YOuHy7-Sf4-cibXao8BQMsU"
@@ -21,7 +34,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "574931919668-uirgob0ok1cqume08u5n61ah79b03mek.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "574931919668-qhfremup1og4cu8pefsqnjk72gai9hq2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.fairwater"
+              }
+            }
+          ]
         }
       }
     },
@@ -32,7 +57,20 @@
           "package_name": "com.example.fairwater"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "574931919668-s13c9ub7fbe2vnrlnjufd3f67uf80big.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.fairwater",
+            "certificate_hash": "f70ad51aa428fc8fc81820a199cf990cc1c87a30"
+          }
+        },
+        {
+          "client_id": "574931919668-uirgob0ok1cqume08u5n61ah79b03mek.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDKigg1OVq8YOuHy7-Sf4-cibXao8BQMsU"
@@ -40,7 +78,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "574931919668-uirgob0ok1cqume08u5n61ah79b03mek.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "574931919668-qhfremup1og4cu8pefsqnjk72gai9hq2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.fairwater"
+              }
+            }
+          ]
         }
       }
     }

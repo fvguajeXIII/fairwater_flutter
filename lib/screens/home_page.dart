@@ -5,12 +5,12 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../services/auth_service.dart';
 import '../services/bar_service.dart';
 
 const Color _kPrimary = Color(0xFF1E73C6);
 const Color _kPrimaryDark = Color(0xFF154F91);
 const Color _kSurface = Color(0xFFF5F8FC);
+const double _kNearbyRadiusMeters = 5000;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,7 +20,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final AuthService _authService = AuthService();
   final BarService _barService = BarService();
   final MapController _mapController = MapController();
 
@@ -143,6 +142,7 @@ class _HomePageState extends State<HomePage> {
             distanceMeters: distanceMeters,
           );
         })
+        .where((bar) => bar.distanceMeters <= _kNearbyRadiusMeters)
         .toList()
       ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
 
@@ -151,12 +151,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final user = _authService.currentUser;
-    final displayName = user?.displayName?.trim();
-    final firstName = displayName == null || displayName.isEmpty
-        ? 'Benvenuto'
-        : displayName.split(' ').first;
-
     return StreamBuilder<List<BarSpot>>(
       stream: _barService.watchBars(),
       builder: (context, snapshot) {
@@ -178,59 +172,7 @@ class _HomePageState extends State<HomePage> {
                 slivers: [
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [_kPrimary, _kPrimaryDark],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Icon(
-                              Icons.water_drop_rounded,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '$firstName, trova un refill',
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF16324F),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Mappa reale, geolocalizzazione attiva e bar affiliati nelle vicinanze.',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.blueGrey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          _LogoutButton(onPressed: () => _authService.signOut()),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 4)),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                       child: _LiveMapCard(
                         loading: _loadingLocation,
                         locationError: _locationError,
@@ -268,7 +210,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           Text(
-                            'Ordinati per distanza',
+                            'Entro 5 km',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -280,6 +222,14 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                  if (nearbyBars.isEmpty)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+                        child: _EmptyNearbyBarsCard(),
+                      ),
+                    )
+                  else
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     sliver: SliverList(
@@ -665,6 +615,43 @@ class _DistanceBadge extends StatelessWidget {
   }
 }
 
+class _EmptyNearbyBarsCard extends StatelessWidget {
+  const _EmptyNearbyBarsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Nessun bar affiliato nel raggio di 5 km.',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF16324F),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Prova ad aggiornare la posizione o spostati leggermente per vedere altri punti vicini.',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: Colors.blueGrey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _InfoChip extends StatelessWidget {
   const _InfoChip({required this.icon, required this.label});
 
@@ -693,29 +680,6 @@ class _InfoChip extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _LogoutButton extends StatelessWidget {
-  const _LogoutButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onPressed,
-        child: const SizedBox(
-          width: 48,
-          height: 48,
-          child: Icon(Icons.logout_rounded, color: Color(0xFF16324F)),
-        ),
       ),
     );
   }

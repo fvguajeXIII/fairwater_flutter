@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../services/auth_service.dart';
+import '../services/biometric_auth_service.dart';
+import '../services/login_preferences_service.dart';
 
 // ─── Color palette ───────────────────────────────────────────────────────────
 
@@ -161,22 +166,82 @@ class _LoginSheet extends StatefulWidget {
 class _LoginSheetState extends State<_LoginSheet> {
   final _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
+  final LoginPreferencesService _loginPreferencesService =
+      LoginPreferencesService();
+  final BiometricAuthService _biometricAuthService = BiometricAuthService();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscure = true;
   bool _isSubmitting = false;
+  bool _rememberMe = false;
+  bool _useBiometric = false;
+  bool _biometricAvailable = false;
+  StreamSubscription<User?>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+    _authSubscription = _authService.authStateChanges().listen((user) {
+      if (user == null || !mounted) {
+        return;
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+
+        final navigator = Navigator.of(context, rootNavigator: true);
+        if (navigator.canPop()) {
+          navigator.pop();
+        }
+      });
+    });
+  }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPreferences() async {
+    final preferences = await _loginPreferencesService.load();
+    final biometricAvailable =
+        !kIsWeb && await _biometricAuthService.isBiometricAvailable();
+
+    if (!mounted) return;
+
+    setState(() {
+      _rememberMe = preferences.rememberMe;
+      _useBiometric =
+          biometricAvailable &&
+          preferences.rememberMe &&
+          preferences.biometricEnabled;
+      _biometricAvailable = biometricAvailable;
+      if (preferences.savedEmail.isNotEmpty) {
+        _emailCtrl.text = preferences.savedEmail;
+      }
+    });
+  }
+
+  Future<void> _saveLoginPreferences({String? email}) {
+    return _loginPreferencesService.save(
+      rememberMe: _rememberMe,
+      biometricEnabled: _useBiometric && _biometricAvailable,
+      email: email ?? _emailCtrl.text,
+    );
   }
 
   Future<void> _login() async {
     if (!(_formKey.currentState?.validate() ?? false) || _isSubmitting) {
       return;
     }
+
+    final navigator = Navigator.of(context, rootNavigator: true);
 
     setState(() => _isSubmitting = true);
 
@@ -186,8 +251,11 @@ class _LoginSheetState extends State<_LoginSheet> {
         password: _passCtrl.text,
       );
 
-      if (!mounted) return;
-      Navigator.pop(context);
+      await _saveLoginPreferences();
+
+      if (navigator.canPop()) {
+        navigator.pop();
+      }
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -207,15 +275,52 @@ class _LoginSheetState extends State<_LoginSheet> {
     }
   }
 
-  void _social(String provider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Social login: $provider (placeholder)')),
-    );
+  Future<void> _signInWithGoogle() async {
+    if (_isSubmitting) {
+      return;
+    }
+
+    final navigator = Navigator.of(context, rootNavigator: true);
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await _authService.signInWithGoogle();
+      await _saveLoginPreferences(email: _authService.currentUser?.email);
+      if (navigator.canPop()) {
+        navigator.pop();
+      }
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'sign_in_canceled') {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_firebaseGoogleMessage(e))));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Accesso con Google non riuscito. Riprova tra qualche istante.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    final isAppleAvailable =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS);
     return DraggableScrollableSheet(
       initialChildSize: 0.72,
       minChildSize: 0.45,
@@ -358,6 +463,43 @@ class _LoginSheetState extends State<_LoginSheet> {
               ),
             ),
             const SizedBox(height: 28),
+            CheckboxListTile(
+              value: _rememberMe,
+              onChanged: _isSubmitting
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _rememberMe = value ?? false;
+                        if (!_rememberMe) {
+                          _useBiometric = false;
+                        }
+                      });
+                    },
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text(
+                'Ricordami',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            if (_biometricAvailable)
+              SwitchListTile(
+                value: _useBiometric,
+                onChanged: !_rememberMe || _isSubmitting
+                    ? null
+                    : (value) => setState(() => _useBiometric = value),
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  'Accesso biometrico',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  _rememberMe
+                      ? 'Usa impronta digitale o Face ID per sbloccare l\'app.'
+                      : 'Attiva prima "Ricordami".',
+                ),
+              ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 const Expanded(child: Divider()),
@@ -374,21 +516,31 @@ class _LoginSheetState extends State<_LoginSheet> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(
-                  child: _SocialBtn(
-                    label: 'Apple',
-                    icon: Icons.apple,
-                    dark: true,
-                    onTap: () => _social('Apple'),
+                if (isAppleAvailable) ...[
+                  Expanded(
+                    child: _SocialBtn(
+                      label: 'Apple',
+                      icon: Icons.apple,
+                      dark: true,
+                      onTap: _isSubmitting
+                          ? null
+                          : () => ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Accesso con Apple non ancora disponibile.',
+                                ),
+                              ),
+                            ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   child: _SocialBtn(
                     label: 'Google',
                     icon: Icons.g_mobiledata,
                     dark: false,
-                    onTap: () => _social('Google'),
+                    onTap: _isSubmitting ? null : _signInWithGoogle,
                   ),
                 ),
               ],
@@ -412,7 +564,7 @@ class _SocialBtn extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool dark;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -800,5 +952,24 @@ String _firebaseRegisterMessage(FirebaseAuthException exception) {
       return 'Connessione assente o instabile.';
     default:
       return exception.message ?? 'Registrazione non riuscita.';
+  }
+}
+
+String _firebaseGoogleMessage(FirebaseAuthException exception) {
+  switch (exception.code) {
+    case 'account-exists-with-different-credential':
+      return 'Esiste gia un account con questa email e un altro metodo di accesso.';
+    case 'popup-closed-by-user':
+    case 'cancelled-popup-request':
+    case 'sign_in_canceled':
+      return 'Accesso con Google annullato.';
+    case 'network-request-failed':
+      return 'Connessione assente o instabile.';
+    case 'missing-google-id-token':
+      return 'Configurazione Google incompleta. Controlla SHA-1 e file Firebase.';
+    case 'google-platform-error':
+      return 'Errore del servizio Google sul dispositivo. Controlla configurazione e Google Play Services.';
+    default:
+      return exception.message ?? 'Accesso con Google non riuscito.';
   }
 }
