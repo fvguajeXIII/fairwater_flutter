@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/bar_service.dart';
+import 'qr_scanner_page.dart';
 
 const Color _kPrimary = Color(0xFF1E73C6);
 const Color _kPrimaryDark = Color(0xFF154F91);
@@ -23,6 +24,7 @@ class _HomePageState extends State<HomePage> {
   final BarService _barService = BarService();
   final MapController _mapController = MapController();
 
+  int _selectedIndex = 0;
   Position? _position;
   String? _locationError;
   bool _loadingLocation = true;
@@ -151,87 +153,135 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final pages = <Widget>[
+      _buildHomeTab(),
+      const _PlaceholderTab(
+        icon: Icons.local_drink_rounded,
+        title: 'Refill',
+      ),
+      const _PlaceholderTab(
+        icon: Icons.campaign_rounded,
+        title: 'Sponsor',
+      ),
+      const _PlaceholderTab(
+        icon: Icons.person_rounded,
+        title: 'Profilo',
+      ),
+    ];
+
+    return Scaffold(
+      extendBody: true,
+      body: IndexedStack(index: _selectedIndex, children: pages),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: _QrScanButton(
+        onPressed: () async {
+          final scannedValue = await Navigator.of(context).push<String>(
+            MaterialPageRoute(
+              builder: (_) => const QrScannerPage(),
+            ),
+          );
+          if (!context.mounted || scannedValue == null || scannedValue.isEmpty) {
+            return;
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('QR scansionato: $scannedValue'),
+            ),
+          );
+        },
+      ),
+      bottomNavigationBar: _BottomNavBar(
+        currentIndex: _selectedIndex,
+        onSelected: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildHomeTab() {
     return StreamBuilder<List<BarSpot>>(
       stream: _barService.watchBars(),
       builder: (context, snapshot) {
         final bars = snapshot.data ?? const <BarSpot>[];
         final nearbyBars = _nearbyBars(bars);
 
-        return Scaffold(
-          extendBodyBehindAppBar: true,
-          body: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFEAF4FF), _kSurface],
-              ),
+        return Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFEAF4FF), _kSurface],
             ),
-            child: SafeArea(
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                      child: _LiveMapCard(
-                        loading: _loadingLocation,
-                        locationError: _locationError,
-                        currentCenter: _currentLatLng,
-                        bars: nearbyBars,
-                        mapController: _mapController,
-                        onRefreshLocation: _loadLocation,
-                        onMapReady: () {
-                          if (!mounted) return;
-                          setState(() {
-                            _mapReady = true;
-                          });
-                          final pendingCenter = _pendingMapCenter;
-                          if (pendingCenter != null) {
-                            _pendingMapCenter = null;
-                            _queueMapMove(pendingCenter);
-                          }
-                        },
-                      ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                    child: _LiveMapCard(
+                      loading: _loadingLocation,
+                      locationError: _locationError,
+                      currentCenter: _currentLatLng,
+                      bars: nearbyBars,
+                      mapController: _mapController,
+                      onRefreshLocation: _loadLocation,
+                      onMapReady: () {
+                        if (!mounted) return;
+                        setState(() {
+                          _mapReady = true;
+                        });
+                        final pendingCenter = _pendingMapCenter;
+                        if (pendingCenter != null) {
+                          _pendingMapCenter = null;
+                          _queueMapMove(pendingCenter);
+                        }
+                      },
                     ),
                   ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 18)),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Bar affiliati',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF16324F),
-                            ),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 18)),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Bar affiliati',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF16324F),
                           ),
-                          Text(
-                            'Entro 5 km',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blueGrey.shade500,
-                            ),
+                        ),
+                        Text(
+                          'Entro 5 km',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blueGrey.shade500,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                  if (nearbyBars.isEmpty)
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
-                        child: _EmptyNearbyBarsCard(),
-                      ),
-                    )
-                  else
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                if (nearbyBars.isEmpty)
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(20, 0, 20, 120),
+                      child: _EmptyNearbyBarsCard(),
+                    ),
+                  )
+                else
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
@@ -246,12 +296,220 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _BottomNavBar extends StatelessWidget {
+  const _BottomNavBar({
+    required this.currentIndex,
+    required this.onSelected,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return BottomAppBar(
+      height: 66,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      color: Colors.white,
+      elevation: 18,
+      shape: const CircularNotchedRectangle(),
+      notchMargin: 8,
+      child: Row(
+        children: [
+          Expanded(
+            child: _NavItem(
+              icon: Icons.home_rounded,
+              label: 'Home',
+              selected: currentIndex == 0,
+              onTap: () => onSelected(0),
+            ),
+          ),
+          Expanded(
+            child: _NavItem(
+              icon: Icons.local_drink_rounded,
+              label: 'Refill',
+              selected: currentIndex == 1,
+              onTap: () => onSelected(1),
+            ),
+          ),
+          const SizedBox(width: 54),
+          Expanded(
+            child: _NavItem(
+              icon: Icons.campaign_rounded,
+              label: 'Sponsor',
+              selected: currentIndex == 2,
+              onTap: () => onSelected(2),
+            ),
+          ),
+          Expanded(
+            child: _NavItem(
+              icon: Icons.person_rounded,
+              label: 'Profilo',
+              selected: currentIndex == 3,
+              onTap: () => onSelected(3),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? _kPrimaryDark : Colors.blueGrey.shade400;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 8.5,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QrScanButton extends StatelessWidget {
+  const _QrScanButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 59,
+      height: 59,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_kPrimary, _kPrimaryDark],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _kPrimary.withValues(alpha: 0.35),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+        child: FloatingActionButton(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        shape: const CircleBorder(),
+        onPressed: onPressed,
+        child: const Icon(Icons.qr_code_scanner_rounded, size: 26),
+      ),
+    );
+  }
+}
+
+class _PlaceholderTab extends StatelessWidget {
+  const _PlaceholderTab({
+    required this.icon,
+    required this.title,
+  });
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFEAF4FF), _kSurface],
+        ),
+      ),
+      child: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 84,
+                  height: 84,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _kPrimary.withValues(alpha: 0.10),
+                        blurRadius: 24,
+                        offset: const Offset(0, 14),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, size: 40, color: _kPrimaryDark),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF16324F),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Sezione vuota per ora, la prepariamo nel prossimo step.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: Colors.blueGrey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -39,6 +39,8 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>FairWater usa la tua posizione per mostrarti i refill e i bar piu vicini.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>FairWater usa la fotocamera per scansionare i QR code.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>FairWater usa Face ID per sbloccare l'accesso rapido al tuo account.</string>
 	<key>UIApplicationSceneManifest</key>
