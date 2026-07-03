@@ -7,6 +7,7 @@ import 'screens/login_page.dart';
 import 'services/auth_service.dart';
 import 'services/biometric_auth_service.dart';
 import 'services/login_preferences_service.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,35 +29,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'FairWater',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1E73C6),
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF5F8FC),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            padding: const EdgeInsets.symmetric(
-              vertical: 14,
-              horizontal: 20,
-            ),
-          ),
-        ),
-        inputDecorationTheme: const InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        ),
-      ),
+      theme: AppTheme.light,
       home: const AuthGate(),
     );
   }
@@ -86,7 +59,8 @@ class AuthGate extends StatelessWidget {
           return FutureBuilder(
             future: loginPreferencesService.load(),
             builder: (context, preferencesSnapshot) {
-              if (preferencesSnapshot.connectionState == ConnectionState.waiting) {
+              if (preferencesSnapshot.connectionState ==
+                  ConnectionState.waiting) {
                 return const _LoadingScreen();
               }
 
@@ -150,34 +124,45 @@ class _BiometricGateState extends State<_BiometricGate> {
     }
 
     return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.fingerprint, size: 64, color: Color(0xFF1E73C6)),
-              const SizedBox(height: 16),
-              Text(
-                _isChecking ? 'Verifica biometrica in corso...' : 'Sblocca con biometria',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
+      body: WaterBackdrop(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Container(
+              padding: const EdgeInsets.all(28),
+              decoration: AppDecorations.glassCard(radius: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const WaterBottleBadge(size: 92),
+                  const SizedBox(height: 18),
+                  Text(
+                    _isChecking
+                        ? 'Verifica biometrica in corso...'
+                        : 'Sblocca con biometria',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Usa impronta digitale o Face ID per rientrare nella tua esperienza FairWater.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  if (_isChecking)
+                    const CircularProgressIndicator()
+                  else
+                    FilledButton(
+                      onPressed: _unlock,
+                      child: const Text('Riprova'),
+                    ),
+                ],
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Usa impronta digitale o Face ID per accedere a FairWater.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              if (!_isChecking)
-                FilledButton(
-                  onPressed: _unlock,
-                  child: const Text('Riprova'),
-                ),
-            ],
+            ),
           ),
         ),
       ),
@@ -191,8 +176,10 @@ class _LoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
+      body: WaterBackdrop(
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
       ),
     );
   }
@@ -206,12 +193,18 @@ class _AuthErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            'Errore di inizializzazione Firebase:\n$message',
-            textAlign: TextAlign.center,
+      body: WaterBackdrop(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: AppDecorations.glassCard(),
+              child: Text(
+                'Errore di inizializzazione Firebase:\n$message',
+                textAlign: TextAlign.center,
+              ),
+            ),
           ),
         ),
       ),
@@ -228,13 +221,20 @@ class _BootstrapErrorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
       home: Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              'Firebase non è ancora configurato correttamente.\n$message',
-              textAlign: TextAlign.center,
+        body: WaterBackdrop(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: AppDecorations.glassCard(),
+                child: Text(
+                  'Firebase non e ancora configurato correttamente.\n$message',
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ),
           ),
         ),

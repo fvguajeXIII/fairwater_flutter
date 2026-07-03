@@ -1,56 +1,24 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 import '../services/biometric_auth_service.dart';
 import '../services/login_preferences_service.dart';
-
-// ─── Color palette ───────────────────────────────────────────────────────────
-
-const Color _kPrimary = Color(0xFF1E73C6);
-const Color _kPrimaryDark = Color(0xFF154F91);
-
-// ─── Shared field decoration ─────────────────────────────────────────────────
+import '../theme/app_theme.dart';
 
 InputDecoration _fieldDeco(String hint, IconData icon) => InputDecoration(
   hintText: hint,
-  hintStyle: const TextStyle(fontSize: 14, color: Color(0xFFAAAAAA)),
-  prefixIcon: Icon(icon, size: 20, color: const Color(0xFFBBBBBB)),
-  filled: true,
-  fillColor: const Color(0xFFF4F6F8),
-  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-  border: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide.none,
-  ),
-  enabledBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide.none,
-  ),
-  focusedBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: _kPrimary, width: 1.5),
-  ),
-  errorBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: Colors.redAccent, width: 1),
-  ),
-  focusedErrorBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
-  ),
+  prefixIcon: Icon(icon, size: 20, color: AppColors.ocean),
 );
-
-// ─── Splash / Landing page ────────────────────────────────────────────────────
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
   void _showLogin(BuildContext context) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -62,103 +30,151 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset('assets/login.jpg', fit: BoxFit.cover),
-          // Dark overlay for readability
-          Container(color: Colors.black.withValues(alpha: 0.18)),
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Spacer(),
-                Container(
-                  margin: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 28,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.30),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () => _showLogin(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: _kPrimary,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            'Accedi',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+      body: WaterBackdrop(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset('assets/login.jpg', fit: BoxFit.cover),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.deepOcean.withValues(alpha: 0.26),
+                    AppColors.deepOcean.withValues(alpha: 0.72),
+                  ],
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _LoginBrandHero(),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: AppDecorations.glassCard(radius: 32),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Non hai un account?',
+                            'Riempila di buone abitudini.',
                             style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              height: 1.1,
                             ),
                           ),
-                          TextButton(
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const RegisterPage(),
-                              ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'FairWater trasforma ogni refill in un gesto visibile per te, la community e l accesso all acqua.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.5,
+                              color: Colors.white.withValues(alpha: 0.86),
                             ),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
+                          ),
+                          const SizedBox(height: 22),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => _showLogin(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: AppColors.deepOcean,
                               ),
+                              child: const Text('Accedi'),
                             ),
-                            child: const Text(
-                              'Registrati',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Nuovo su FairWater?',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.80),
+                                ),
                               ),
-                            ),
+                              TextButton(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const RegisterPage(),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Crea account',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-// ─── Login bottom sheet ───────────────────────────────────────────────────────
+class _LoginBrandHero extends StatelessWidget {
+  const _LoginBrandHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const WaterBottleBadge(size: 76),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+          ),
+          child: Text(
+            'Borraccia. Refill. Impatto.',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.92),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'L app che fa scorrere\nla tua identita acqua.',
+          style: TextStyle(
+            fontSize: 34,
+            height: 1.02,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class _LoginSheet extends StatefulWidget {
   const _LoginSheet();
+
   @override
   State<_LoginSheet> createState() => _LoginSheetState();
 }
@@ -171,6 +187,7 @@ class _LoginSheetState extends State<_LoginSheet> {
   final BiometricAuthService _biometricAuthService = BiometricAuthService();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+
   bool _obscure = true;
   bool _isSubmitting = false;
   bool _rememberMe = false;
@@ -321,193 +338,180 @@ class _LoginSheetState extends State<_LoginSheet> {
         !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.iOS ||
             defaultTargetPlatform == TargetPlatform.macOS);
+
     return DraggableScrollableSheet(
-      initialChildSize: 0.72,
-      minChildSize: 0.45,
+      initialChildSize: 0.78,
+      minChildSize: 0.48,
       maxChildSize: 0.95,
       snap: true,
-      snapSizes: const [0.55, 0.72, 0.95],
+      snapSizes: const [0.58, 0.78, 0.95],
       builder: (_, scrollCtrl) => Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF9FEFF), Color(0xFFEAFBFF)],
+          ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(34)),
         ),
         child: ListView(
           controller: scrollCtrl,
           padding: EdgeInsets.fromLTRB(24, 0, 24, 24 + viewInsets),
           children: [
-            // drag handle
             Center(
               child: Container(
                 margin: const EdgeInsets.symmetric(vertical: 14),
-                width: 44,
-                height: 4,
+                width: 46,
+                height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
+                  color: const Color(0xFFD2EAF1),
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
             ),
-            const Text(
-              'Accedi',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
             Row(
               children: [
-                Text(
-                  'Non hai ancora un account?',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const RegisterPage()),
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text(
-                    'Registrati',
-                    style: TextStyle(
-                      color: _kPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
+                const WaterBottleBadge(size: 58, showGlow: false),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Bentornato',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                      Text(
+                        'Accedi e continua il tuo ritmo di refill.',
+                        style: TextStyle(
+                          color: AppColors.slate.withValues(alpha: 0.92),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: _fieldDeco('Email', Icons.mail_outline),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Inserisci una email';
-                      if (!RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$").hasMatch(v)) {
-                        return 'Email non valida';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passCtrl,
-                    obscureText: _obscure,
-                    decoration: _fieldDeco('Password', Icons.lock_outline)
-                        .copyWith(
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscure
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                              size: 20,
-                              color: Colors.grey.shade400,
-                            ),
-                            onPressed: () =>
-                                setState(() => _obscure = !_obscure),
-                          ),
-                        ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return 'Inserisci la password';
-                      }
-                      if (v.length < 6) return 'Almeno 6 caratteri';
-                      return null;
-                    },
-                  ),
-                ],
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFD9EDF3)),
               ),
-            ),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _login,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kPrimary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  elevation: 0,
-                ),
-                child: _isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : const Text(
-                        'Accedi',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(height: 28),
-            CheckboxListTile(
-              value: _rememberMe,
-              onChanged: _isSubmitting
-                  ? null
-                  : (value) {
-                      setState(() {
-                        _rememberMe = value ?? false;
-                        if (!_rememberMe) {
-                          _useBiometric = false;
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: _fieldDeco('Email', Icons.alternate_email_rounded),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Inserisci una email';
+                        if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v)) {
+                          return 'Email non valida';
                         }
-                      });
-                    },
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              title: const Text(
-                'Ricordami',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _passCtrl,
+                      obscureText: _obscure,
+                      decoration: _fieldDeco('Password', Icons.lock_outline_rounded)
+                          .copyWith(
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscure
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                color: AppColors.slate,
+                              ),
+                              onPressed: () =>
+                                  setState(() => _obscure = !_obscure),
+                            ),
+                          ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) {
+                          return 'Inserisci la password';
+                        }
+                        if (v.length < 6) return 'Almeno 6 caratteri';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting ? null : _login,
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text('Accedi'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            if (_biometricAvailable)
-              SwitchListTile(
-                value: _useBiometric,
-                onChanged: !_rememberMe || _isSubmitting
+            const SizedBox(height: 18),
+            _PreferenceTile(
+              title: 'Ricordami',
+              subtitle: 'Mantieni pronta la tua email per il prossimo accesso.',
+              leading: Icons.bookmark_added_rounded,
+              trailing: Checkbox(
+                value: _rememberMe,
+                onChanged: _isSubmitting
                     ? null
-                    : (value) => setState(() => _useBiometric = value),
-                contentPadding: EdgeInsets.zero,
-                title: const Text(
-                  'Accesso biometrico',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  _rememberMe
-                      ? 'Usa impronta digitale o Face ID per sbloccare l\'app.'
-                      : 'Attiva prima "Ricordami".',
+                    : (value) {
+                        setState(() {
+                          _rememberMe = value ?? false;
+                          if (!_rememberMe) {
+                            _useBiometric = false;
+                          }
+                        });
+                      },
+              ),
+            ),
+            if (_biometricAvailable) ...[
+              const SizedBox(height: 10),
+              _PreferenceTile(
+                title: 'Accesso biometrico',
+                subtitle: _rememberMe
+                    ? 'Sblocca FairWater con impronta o Face ID.'
+                    : 'Attiva prima "Ricordami".',
+                leading: Icons.fingerprint_rounded,
+                trailing: Switch(
+                  value: _useBiometric,
+                  onChanged: !_rememberMe || _isSubmitting
+                      ? null
+                      : (value) => setState(() => _useBiometric = value),
                 ),
               ),
-            const SizedBox(height: 8),
+            ],
+            const SizedBox(height: 18),
             Row(
               children: [
                 const Expanded(child: Divider()),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
-                    'Oppure accedi con',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                    'Oppure entra con',
+                    style: TextStyle(color: AppColors.slate.withValues(alpha: 0.9)),
                   ),
                 ),
                 const Expanded(child: Divider()),
@@ -520,8 +524,8 @@ class _LoginSheetState extends State<_LoginSheet> {
                   Expanded(
                     child: _SocialBtn(
                       label: 'Apple',
-                      icon: Icons.apple,
                       dark: true,
+                      iconWidget: const Icon(Icons.apple, size: 20),
                       onTap: _isSubmitting
                           ? null
                           : () => ScaffoldMessenger.of(context).showSnackBar(
@@ -538,12 +542,24 @@ class _LoginSheetState extends State<_LoginSheet> {
                 Expanded(
                   child: _SocialBtn(
                     label: 'Google',
-                    icon: Icons.g_mobiledata,
                     dark: false,
+                    iconWidget: const Icon(Icons.g_mobiledata, size: 24),
                     onTap: _isSubmitting ? null : _signInWithGoogle,
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 14),
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RegisterPage()),
+                  );
+                },
+                child: const Text('Non hai ancora un account? Registrati'),
+              ),
             ),
           ],
         ),
@@ -552,46 +568,113 @@ class _LoginSheetState extends State<_LoginSheet> {
   }
 }
 
-// ─── Social button ────────────────────────────────────────────────────────────
-
-class _SocialBtn extends StatelessWidget {
-  const _SocialBtn({
-    required this.label,
-    required this.icon,
-    required this.dark,
-    required this.onTap,
+class _PreferenceTile extends StatelessWidget {
+  const _PreferenceTile({
+    required this.title,
+    required this.subtitle,
+    required this.leading,
+    required this.trailing,
   });
-  final String label;
-  final IconData icon;
-  final bool dark;
-  final VoidCallback? onTap;
+
+  final String title;
+  final String subtitle;
+  final IconData leading;
+  final Widget trailing;
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: 22, color: dark ? Colors.white : Colors.black87),
-      label: Text(
-        label,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: dark ? Colors.white : Colors.black87,
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFD9EDF3)),
       ),
-      style: OutlinedButton.styleFrom(
-        backgroundColor: dark ? Colors.black87 : Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        side: dark ? BorderSide.none : BorderSide(color: Colors.grey.shade300),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.mist,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(leading, color: AppColors.ocean),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          trailing,
+        ],
       ),
     );
   }
 }
 
-// ─── Register page ────────────────────────────────────────────────────────────
+class _SocialBtn extends StatelessWidget {
+  const _SocialBtn({
+    required this.label,
+    required this.dark,
+    required this.iconWidget,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool dark;
+  final Widget iconWidget;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        backgroundColor: dark ? AppColors.ink : Colors.white,
+        side: BorderSide(
+          color: dark ? AppColors.ink : const Color(0xFFD8EAF0),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconTheme(
+            data: IconThemeData(color: dark ? Colors.white : AppColors.ink),
+            child: iconWidget,
+          ),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: TextStyle(
+              color: dark ? Colors.white : AppColors.ink,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
+
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
@@ -607,6 +690,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _residenceCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _referralCtrl = TextEditingController();
+
   bool _obscure = true;
   bool _isSubmitting = false;
 
@@ -670,242 +754,235 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          // teal header
-          Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF00D9D9), _kPrimary, _kPrimaryDark],
-              ),
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      body: WaterBackdrop(
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+                decoration: BoxDecoration(
+                  gradient: AppDecorations.heroGradient,
+                  borderRadius: BorderRadius.circular(32),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios,
-                        color: Colors.white,
-                        size: 20,
-                      ),
                       onPressed: () => Navigator.of(context).pop(),
-                      padding: EdgeInsets.zero,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Crea il tuo account\ne accedi a FairWater',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        height: 1.3,
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.14),
+                        foregroundColor: Colors.white,
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // form
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _sectionLabel('Dati obbligatori'),
-                    const SizedBox(height: 12),
-
+                    const SizedBox(height: 18),
                     Row(
                       children: [
+                        const WaterBottleBadge(size: 64, showGlow: false),
+                        const SizedBox(width: 14),
                         Expanded(
-                          child: TextFormField(
-                            controller: _firstNameCtrl,
-                            decoration: _fieldDeco(
-                              'Nome',
-                              Icons.person_outline,
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Obbligatorio'
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _lastNameCtrl,
-                            decoration: _fieldDeco(
-                              'Cognome',
-                              Icons.person_outline,
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Obbligatorio'
-                                : null,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Crea il tuo profilo acqua',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.05,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Un account, una borraccia, un impatto che cresce refill dopo refill.',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.86),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: _emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: _fieldDeco(
-                        'Email per il login',
-                        Icons.mail_outline,
-                      ),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) {
-                          return 'Inserisci una email';
-                        }
-                        if (!RegExp(
-                          r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
-                        ).hasMatch(v)) {
-                          return 'Email non valida';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: _passCtrl,
-                      obscureText: _obscure,
-                      decoration: _fieldDeco('Password', Icons.lock_outline)
-                          .copyWith(
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscure
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                size: 20,
-                                color: Colors.grey.shade400,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _obscure = !_obscure),
-                            ),
-                          ),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) {
-                          return 'Inserisci la password';
-                        }
-                        if (v.length < 6) return 'Almeno 6 caratteri';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: _confirmCtrl,
-                      obscureText: _obscure,
-                      decoration: _fieldDeco(
-                        'Conferma password',
-                        Icons.lock_outline,
-                      ),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) {
-                          return 'Conferma la password';
-                        }
-                        if (v != _passCtrl.text) {
-                          return 'Le password non corrispondono';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: _residenceCtrl,
-                      decoration: _fieldDeco(
-                        'Residenza (città, provincia)',
-                        Icons.location_on_outlined,
-                      ),
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Inserisci la residenza'
-                          : null,
-                    ),
-
-                    const SizedBox(height: 24),
-                    _sectionLabel('Dati opzionali'),
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: _phoneCtrl,
-                      keyboardType: TextInputType.phone,
-                      decoration: _fieldDeco(
-                        'Numero di telefono',
-                        Icons.phone_outlined,
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return null;
-                        if (!RegExp(r"^[0-9()+\-\s]{6,}$").hasMatch(v)) {
-                          return 'Numero non valido';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: _referralCtrl,
-                      decoration: _fieldDeco(
-                        'Codice referral',
-                        Icons.card_giftcard_outlined,
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _register,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _kPrimary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : const Text(
-                                'Crea account',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                    ),
                   ],
                 ),
               ),
-            ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 36),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: AppDecorations.glassCard(radius: 30),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _sectionLabel('Dati essenziali'),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _firstNameCtrl,
+                                  decoration: _fieldDeco(
+                                    'Nome',
+                                    Icons.person_outline_rounded,
+                                  ),
+                                  validator: (v) => (v == null || v.trim().isEmpty)
+                                      ? 'Obbligatorio'
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _lastNameCtrl,
+                                  decoration: _fieldDeco(
+                                    'Cognome',
+                                    Icons.person_outline_rounded,
+                                  ),
+                                  validator: (v) => (v == null || v.trim().isEmpty)
+                                      ? 'Obbligatorio'
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: _fieldDeco(
+                              'Email per il login',
+                              Icons.alternate_email_rounded,
+                            ),
+                            validator: (v) {
+                              if (v == null || v.isEmpty) {
+                                return 'Inserisci una email';
+                              }
+                              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                                  .hasMatch(v)) {
+                                return 'Email non valida';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _passCtrl,
+                            obscureText: _obscure,
+                            decoration: _fieldDeco(
+                              'Password',
+                              Icons.lock_outline_rounded,
+                            ).copyWith(
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscure
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: AppColors.slate,
+                                ),
+                                onPressed: () =>
+                                    setState(() => _obscure = !_obscure),
+                              ),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.isEmpty) {
+                                return 'Inserisci la password';
+                              }
+                              if (v.length < 6) return 'Almeno 6 caratteri';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _confirmCtrl,
+                            obscureText: _obscure,
+                            decoration: _fieldDeco(
+                              'Conferma password',
+                              Icons.verified_user_outlined,
+                            ),
+                            validator: (v) {
+                              if (v == null || v.isEmpty) {
+                                return 'Conferma la password';
+                              }
+                              if (v != _passCtrl.text) {
+                                return 'Le password non corrispondono';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _residenceCtrl,
+                            decoration: _fieldDeco(
+                              'Residenza (citta, provincia)',
+                              Icons.location_on_outlined,
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Inserisci la residenza'
+                                : null,
+                          ),
+                          const SizedBox(height: 24),
+                          _sectionLabel('Dettagli opzionali'),
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            controller: _phoneCtrl,
+                            keyboardType: TextInputType.phone,
+                            decoration: _fieldDeco(
+                              'Numero di telefono',
+                              Icons.phone_outlined,
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return null;
+                              if (!RegExp(r'^[0-9()+\-\s]{6,}$').hasMatch(v)) {
+                                return 'Numero non valido';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _referralCtrl,
+                            decoration: _fieldDeco(
+                              'Codice referral',
+                              Icons.card_giftcard_outlined,
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isSubmitting ? null : _register,
+                              child: _isSubmitting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                    )
+                                  : const Text('Crea account'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -913,11 +990,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
 Widget _sectionLabel(String text) => Text(
   text,
-  style: TextStyle(
+  style: const TextStyle(
     fontSize: 12,
-    fontWeight: FontWeight.w600,
-    color: Colors.grey.shade500,
-    letterSpacing: 0.5,
+    fontWeight: FontWeight.w800,
+    color: AppColors.ocean,
+    letterSpacing: 0.3,
   ),
 );
 

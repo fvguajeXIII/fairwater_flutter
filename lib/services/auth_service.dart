@@ -84,10 +84,15 @@ class AuthService {
           'uid': user.uid,
           'firstName': firstName.trim(),
           'lastName': lastName.trim(),
+          'displayName': '$firstName $lastName'.trim(),
           'email': email.trim(),
           'residence': residence.trim(),
           'phone': phone?.trim() ?? '',
           'referralCode': referralCode?.trim() ?? '',
+          'photoUrl': '',
+          'provider': 'password',
+          'refillCount': 0,
+          'bottleOwnerSince': FieldValue.serverTimestamp(),
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         })
@@ -205,12 +210,12 @@ class AuthService {
     final snapshot = await userDoc.get().timeout(_requestTimeout);
 
     if (snapshot.exists) {
-      await userDoc.update({
+      await userDoc.set({
         'email': user.email ?? '',
         'displayName': user.displayName ?? '',
         'photoUrl': user.photoURL ?? '',
         'updatedAt': FieldValue.serverTimestamp(),
-      }).timeout(_requestTimeout);
+      }, SetOptions(merge: true)).timeout(_requestTimeout);
       return;
     }
 
@@ -232,6 +237,8 @@ class AuthService {
       'referralCode': '',
       'photoUrl': user.photoURL ?? '',
       'provider': 'google',
+      'refillCount': 0,
+      'bottleOwnerSince': FieldValue.serverTimestamp(),
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     }).timeout(_requestTimeout);

@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 
+import '../theme/app_theme.dart';
+
 class QrScannerPage extends StatefulWidget {
   const QrScannerPage({super.key});
 
@@ -96,12 +98,12 @@ class _QrScannerPageState extends State<QrScannerPage> {
             key: _qrKey,
             onQRViewCreated: _onQRViewCreated,
             overlay: QrScannerOverlayShape(
-              borderColor: Colors.white,
-              borderRadius: 28,
-              borderLength: 34,
-              borderWidth: 6,
+              borderColor: AppColors.aqua,
+              borderRadius: 34,
+              borderLength: 38,
+              borderWidth: 7,
               cutOutSize: 250,
-              overlayColor: Colors.black.withValues(alpha: 0.45),
+              overlayColor: Colors.black.withValues(alpha: 0.58),
             ),
             onPermissionSet: (controller, granted) {
               if (!granted) {
@@ -139,11 +141,14 @@ class _QrScannerPageState extends State<QrScannerPage> {
                       vertical: 14,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(18),
+                      color: AppColors.deepOcean.withValues(alpha: 0.72),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.12),
+                      ),
                     ),
                     child: const Text(
-                      'Inquadra un QR code all interno del riquadro.',
+                      'Inquadra il QR del refill all interno del riquadro.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white,
@@ -175,10 +180,10 @@ class _ScannerTopButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white.withValues(alpha: 0.16),
-      borderRadius: BorderRadius.circular(16),
+      color: AppColors.deepOcean.withValues(alpha: 0.36),
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         onTap: onPressed,
         child: SizedBox(
           width: 48,

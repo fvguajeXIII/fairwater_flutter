@@ -5,13 +5,85 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../services/auth_service.dart';
 import '../services/bar_service.dart';
+import '../services/profile_service.dart';
+import '../theme/app_theme.dart';
+import 'profile_page.dart';
 import 'qr_scanner_page.dart';
 
-const Color _kPrimary = Color(0xFF1E73C6);
-const Color _kPrimaryDark = Color(0xFF154F91);
-const Color _kSurface = Color(0xFFF5F8FC);
+const Color _kPrimary = AppColors.ocean;
+const Color _kPrimaryDark = AppColors.deepOcean;
+const Color _kSurface = AppColors.foam;
 const double _kNearbyRadiusMeters = 5000;
+const List<_SponsorSpot> _kSampleSponsors = [
+  _SponsorSpot(
+    name: 'Emporio del Corso',
+    category: 'Market di quartiere',
+    address: 'Corso Italia 18, Fondi',
+    contribution: 'Supporto logistico e materiali per gli eventi.',
+    thankYouMessage:
+        'Grazie per aver creduto nel progetto fin dal primo momento e per averci aiutato a coinvolgere il quartiere.',
+    supports: ['Eventi locali', 'Materiali', 'Presenza sul territorio'],
+    socialLinks: {
+      'instagram': 'https://www.instagram.com/emporiodelcorso',
+      'facebook': 'https://www.facebook.com/emporiodelcorso',
+    },
+    featured: true,
+  ),
+  _SponsorSpot(
+    name: 'Pasticceria La Portella',
+    category: 'Pasticceria artigianale',
+    address: 'Via Roma 42, Fondi',
+    contribution: 'Accoglienza durante presentazioni e giornate divulgative.',
+    thankYouMessage:
+        'Il vostro contributo ha reso gli incontri con la comunita piu calorosi, accessibili e partecipati.',
+    supports: ['Accoglienza', 'Degustazioni', 'Eventi'],
+    socialLinks: {
+      'instagram': 'https://www.instagram.com/pasticcerialaportella',
+      'website': 'https://www.pasticcerialaportella.it',
+    },
+  ),
+  _SponsorSpot(
+    name: 'Cartolibreria Aurora',
+    category: 'Cartoleria e libreria',
+    address: 'Viale Vittorio Emanuele III 7, Fondi',
+    contribution: 'Stampa di materiali informativi e supporti promozionali.',
+    thankYouMessage:
+        'Grazie per averci aiutato a raccontare il progetto con materiali chiari, curati e sempre disponibili.',
+    supports: ['Volantini', 'Locandine', 'Comunicazione'],
+    socialLinks: {
+      'facebook': 'https://www.facebook.com/cartolibreriaaurora',
+      'instagram': 'https://www.instagram.com/cartolibreriaaurora',
+    },
+  ),
+  _SponsorSpot(
+    name: 'Officina Verde',
+    category: 'Mobilita sostenibile',
+    address: 'Via Appia Lato Roma 95, Fondi',
+    contribution: 'Supporto tecnico per iniziative legate a mobilita e territorio.',
+    thankYouMessage:
+        'La vostra sensibilita verso il territorio ha dato forza concreta alla visione del progetto.',
+    supports: ['Territorio', 'Tecnica', 'Sostenibilita'],
+    socialLinks: {
+      'instagram': 'https://www.instagram.com/officinaverdefondi',
+      'website': 'https://www.officinaverdefondi.it',
+    },
+  ),
+  _SponsorSpot(
+    name: 'Erboristeria San Magno',
+    category: 'Benessere e prodotti naturali',
+    address: 'Piazza Unita d Italia 11, Fondi',
+    contribution: 'Sostegno economico e visibilita alle attivita di lancio.',
+    thankYouMessage:
+        'Grazie per il sostegno ricevuto: il vostro aiuto ha contribuito davvero alla realizzazione del progetto.',
+    supports: ['Sponsorizzazione', 'Benessere', 'Community'],
+    socialLinks: {
+      'instagram': 'https://www.instagram.com/erboristeriasanmagno',
+      'facebook': 'https://www.facebook.com/erboristeriasanmagno',
+    },
+  ),
+];
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,7 +93,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final AuthService _authService = AuthService();
   final BarService _barService = BarService();
+  final ProfileService _profileService = ProfileService();
   final MapController _mapController = MapController();
 
   int _selectedIndex = 0;
@@ -155,18 +229,9 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       _buildHomeTab(),
-      const _PlaceholderTab(
-        icon: Icons.local_drink_rounded,
-        title: 'Refill',
-      ),
-      const _PlaceholderTab(
-        icon: Icons.campaign_rounded,
-        title: 'Sponsor',
-      ),
-      const _PlaceholderTab(
-        icon: Icons.person_rounded,
-        title: 'Profilo',
-      ),
+      _buildRefillTab(),
+      _buildSponsorTab(),
+      ProfilePage(),
     ];
 
     return Scaffold(
@@ -183,11 +248,7 @@ class _HomePageState extends State<HomePage> {
           if (!context.mounted || scannedValue == null || scannedValue.isEmpty) {
             return;
           }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('QR scansionato: $scannedValue'),
-            ),
-          );
+          await _handleScannedRefill(scannedValue);
         },
       ),
       bottomNavigationBar: _BottomNavBar(
@@ -208,21 +269,14 @@ class _HomePageState extends State<HomePage> {
         final bars = snapshot.data ?? const <BarSpot>[];
         final nearbyBars = _nearbyBars(bars);
 
-        return Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFEAF4FF), _kSurface],
-            ),
-          ),
+        return WaterBackdrop(
           child: SafeArea(
             bottom: false,
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
                     child: _LiveMapCard(
                       loading: _loadingLocation,
                       locationError: _locationError,
@@ -256,7 +310,7 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF16324F),
+                            color: AppColors.ink,
                           ),
                         ),
                         Text(
@@ -264,7 +318,7 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Colors.blueGrey.shade500,
+                            color: AppColors.slate,
                           ),
                         ),
                       ],
@@ -303,6 +357,113 @@ class _HomePageState extends State<HomePage> {
       },
     );
   }
+
+  Widget _buildRefillTab() {
+    return StreamBuilder<List<BarSpot>>(
+      stream: _barService.watchBars(),
+      builder: (context, snapshot) {
+        final bars = <BarSpot>[...?snapshot.data]
+          ..sort((a, b) {
+            if (a.featured != b.featured) {
+              return a.featured ? -1 : 1;
+            }
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          });
+
+        return WaterBackdrop(
+          child: SafeArea(
+            bottom: false,
+            child: CustomScrollView(
+              slivers: [
+                if (bars.isEmpty)
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(20, 14, 20, 120),
+                      child: _EmptyRefillCard(),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          if (index.isOdd) {
+                            return const SizedBox(height: 14);
+                          }
+                          final bar = bars[index ~/ 2];
+                          return _RefillSpotCard(bar: bar);
+                        },
+                        childCount: bars.length * 2 - 1,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSponsorTab() {
+    final sponsors = _kSampleSponsors;
+
+    return WaterBackdrop(
+      child: SafeArea(
+        bottom: false,
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    if (index.isOdd) {
+                      return const SizedBox(height: 14);
+                    }
+                    final sponsor = sponsors[index ~/ 2];
+                    return _SponsorCard(sponsor: sponsor);
+                  },
+                  childCount: sponsors.length * 2 - 1,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleScannedRefill(String scannedValue) async {
+    final user = _authService.currentUser;
+    if (user == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Accedi per registrare i refill nel tuo profilo.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await _profileService.recordRefill(uid: user.uid, source: scannedValue);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Refill registrato. Il tuo profilo e stato aggiornato.'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Non riesco a registrare il refill in questo momento.'),
+        ),
+      );
+    }
+  }
 }
 
 class _BottomNavBar extends StatelessWidget {
@@ -317,12 +478,12 @@ class _BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomAppBar(
-      height: 66,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-      color: Colors.white,
-      elevation: 18,
+      height: 74,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      color: Colors.white.withValues(alpha: 0.96),
+      elevation: 10,
       shape: const CircularNotchedRectangle(),
-      notchMargin: 8,
+      notchMargin: 10,
       child: Row(
         children: [
           Expanded(
@@ -380,27 +541,36 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? _kPrimaryDark : Colors.blueGrey.shade400;
+    final bg = selected ? AppColors.mist : Colors.transparent;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(20),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 8.5,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                color: color,
+        padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 4),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 19),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: color,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -415,34 +585,31 @@ class _QrScanButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 59,
-      height: 59,
+      width: 68,
+      height: 68,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_kPrimary, _kPrimaryDark],
-        ),
+        gradient: AppDecorations.heroGradient,
         boxShadow: [
           BoxShadow(
-            color: _kPrimary.withValues(alpha: 0.35),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
+            color: _kPrimary.withValues(alpha: 0.28),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
           ),
         ],
       ),
-        child: FloatingActionButton(
+      child: FloatingActionButton(
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         shape: const CircleBorder(),
         onPressed: onPressed,
-        child: const Icon(Icons.qr_code_scanner_rounded, size: 26),
+        child: const Icon(Icons.qr_code_scanner_rounded, size: 28),
       ),
     );
   }
 }
+
 
 class _PlaceholderTab extends StatelessWidget {
   const _PlaceholderTab({
@@ -509,6 +676,742 @@ class _PlaceholderTab extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _RefillSpotCard extends StatelessWidget {
+  const _RefillSpotCard({required this.bar});
+
+  final BarSpot bar;
+
+  @override
+  Widget build(BuildContext context) {
+    final services = bar.services.isEmpty
+        ? const <String>['Servizi in aggiornamento']
+        : bar.services;
+    final galleryImages = bar.galleryImages.take(6).toList();
+    final socialEntries = bar.socialLinks.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE2EAF2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: const Color(0xFFF3F7FB),
+                ),
+                child: const Icon(
+                  Icons.storefront_rounded,
+                  color: _kPrimaryDark,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            bar.name,
+                            style: const TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF16324F),
+                            ),
+                          ),
+                        ),
+                        if (bar.featured)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F7FB),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Text(
+                              'In evidenza',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: _kPrimaryDark,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _RefillDetailRow(
+                      icon: Icons.location_on_outlined,
+                      text: _buildAddress(bar),
+                    ),
+                    const SizedBox(height: 6),
+                    _RefillDetailRow(
+                      icon: Icons.schedule_rounded,
+                      text: bar.openInfo,
+                    ),
+                    const SizedBox(height: 6),
+                    _RefillDetailRow(
+                      icon: Icons.water_drop_outlined,
+                      text: bar.refillInfo,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _SectionHeader(
+            title: 'Gallery',
+            trailing: '${galleryImages.length} foto',
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 96,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: galleryImages.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                return _GalleryThumbnail(
+                  imageUrl: galleryImages[index],
+                  index: index,
+                  onTap: () => _openGalleryViewer(
+                    context,
+                    title: bar.name,
+                    images: galleryImages,
+                    initialIndex: index,
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Divider(height: 1, color: Color(0xFFECF1F5)),
+          const SizedBox(height: 20),
+          const _SectionHeader(title: 'Servizi offerti'),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: services
+                .map(
+                  (service) => _InfoChip(
+                    icon: Icons.check_circle_outline_rounded,
+                    label: service,
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 20),
+          const Divider(height: 1, color: Color(0xFFECF1F5)),
+          const SizedBox(height: 20),
+          const _SectionHeader(title: 'Social'),
+          const SizedBox(height: 12),
+          if (socialEntries.isEmpty)
+            Text(
+              'Pagine social in aggiornamento.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.blueGrey.shade600,
+              ),
+            )
+          else
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: socialEntries
+                  .map(
+                    (entry) => _SocialLinkButton(
+                      label: _socialLabel(entry.key),
+                      icon: _socialIcon(entry.key),
+                      onTap: () => _launchExternalLink(
+                        context,
+                        entry.value,
+                        failureMessage:
+                            'Non riesco ad aprire ${_socialLabel(entry.key)} in questo momento.',
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SponsorCard extends StatelessWidget {
+  const _SponsorCard({required this.sponsor});
+
+  final _SponsorSpot sponsor;
+
+  @override
+  Widget build(BuildContext context) {
+    final socialEntries = sponsor.socialLinks.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE2EAF2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: const Color(0xFFF3F7FB),
+                ),
+                child: const Icon(
+                  Icons.handshake_rounded,
+                  color: _kPrimaryDark,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            sponsor.name,
+                            style: const TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF16324F),
+                            ),
+                          ),
+                        ),
+                        if (sponsor.featured)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F7FB),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Text(
+                              'Sponsor partner',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: _kPrimaryDark,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _RefillDetailRow(
+                      icon: Icons.store_mall_directory_outlined,
+                      text: sponsor.category,
+                    ),
+                    const SizedBox(height: 6),
+                    _RefillDetailRow(
+                      icon: Icons.location_on_outlined,
+                      text: sponsor.address,
+                    ),
+                    const SizedBox(height: 6),
+                    _RefillDetailRow(
+                      icon: Icons.favorite_outline_rounded,
+                      text: sponsor.contribution,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const _SectionHeader(title: 'Messaggio di ringraziamento'),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7FAFD),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFE8EEF5)),
+            ),
+            child: Text(
+              sponsor.thankYouMessage,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: Colors.blueGrey.shade700,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Divider(height: 1, color: Color(0xFFECF1F5)),
+          const SizedBox(height: 20),
+          const _SectionHeader(title: 'Contributo al progetto'),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: sponsor.supports
+                .map(
+                  (support) => _InfoChip(
+                    icon: Icons.volunteer_activism_outlined,
+                    label: support,
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 20),
+          const Divider(height: 1, color: Color(0xFFECF1F5)),
+          const SizedBox(height: 20),
+          const _SectionHeader(title: 'Social'),
+          const SizedBox(height: 12),
+          if (socialEntries.isEmpty)
+            Text(
+              'Pagine social in aggiornamento.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.blueGrey.shade600,
+              ),
+            )
+          else
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: socialEntries
+                  .map(
+                    (entry) => _SocialLinkButton(
+                      label: _socialLabel(entry.key),
+                      icon: _socialIcon(entry.key),
+                      onTap: () => _launchExternalLink(
+                        context,
+                        entry.value,
+                        failureMessage:
+                            'Non riesco ad aprire ${_socialLabel(entry.key)} in questo momento.',
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GalleryThumbnail extends StatelessWidget {
+  const _GalleryThumbnail({
+    required this.imageUrl,
+    required this.index,
+    required this.onTap,
+  });
+
+  final String imageUrl;
+  final int index;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Stack(
+          children: [
+            SizedBox(
+              width: 120,
+              height: 96,
+              child: _GalleryImage(imageUrl: imageUrl),
+            ),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${index + 1}/6',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GalleryImage extends StatelessWidget {
+  const _GalleryImage({required this.imageUrl});
+
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) {
+          return child;
+        }
+        return Container(
+          color: const Color(0xFFF4F7FA),
+          alignment: Alignment.center,
+          child: const SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 2.2),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: const Color(0xFFF4F7FA),
+          alignment: Alignment.center,
+          child: const Icon(
+            Icons.image_not_supported_outlined,
+            color: _kPrimaryDark,
+            size: 28,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    this.trailing,
+  });
+
+  final String title;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF16324F),
+          ),
+        ),
+        const Spacer(),
+        if (trailing != null)
+          Text(
+            trailing!,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.blueGrey.shade500,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _RefillDetailRow extends StatelessWidget {
+  const _RefillDetailRow({
+    required this.icon,
+    required this.text,
+  });
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(icon, size: 15, color: Colors.blueGrey.shade400),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              color: Colors.blueGrey.shade600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GalleryViewerDialog extends StatefulWidget {
+  const _GalleryViewerDialog({
+    required this.title,
+    required this.images,
+    required this.initialIndex,
+  });
+
+  final String title;
+  final List<String> images;
+  final int initialIndex;
+
+  @override
+  State<_GalleryViewerDialog> createState() => _GalleryViewerDialogState();
+}
+
+class _GalleryViewerDialogState extends State<_GalleryViewerDialog> {
+  late final PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F223A),
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 10, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.title,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Foto ${_currentIndex + 1} di ${widget.images.length}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white.withValues(alpha: 0.75),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            AspectRatio(
+              aspectRatio: 4 / 3,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: widget.images.length,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentIndex = index;
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    return _GalleryImage(imageUrl: widget.images[index]);
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 68,
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                scrollDirection: Axis.horizontal,
+                itemCount: widget.images.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (context, index) {
+                  final isSelected = index == _currentIndex;
+                  return GestureDetector(
+                    onTap: () {
+                      _pageController.animateToPage(
+                        index,
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOut,
+                      );
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 76,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected ? Colors.white : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: _GalleryImage(imageUrl: widget.images[index]),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialLinkButton extends StatelessWidget {
+  const _SocialLinkButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _kPrimaryDark,
+        side: const BorderSide(color: Color(0xFFE2EAF2)),
+        backgroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        textStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+        elevation: 0,
+      ),
+    );
+  }
+}
+
+class _EmptyRefillCard extends StatelessWidget {
+  const _EmptyRefillCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2EAF2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Nessun punto refill disponibile per ora.',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF16324F),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Quando i locali saranno attivi, qui compariranno schede con orari, servizi e link social.',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: Colors.blueGrey.shade600,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -919,21 +1822,22 @@ class _InfoChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F8FD),
+        color: const Color(0xFFF8FAFC),
+        border: Border.all(color: const Color(0xFFE3EAF1)),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: _kPrimary),
+          Icon(icon, size: 14, color: Colors.blueGrey.shade500),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               color: Colors.blueGrey.shade700,
             ),
           ),
@@ -941,6 +1845,28 @@ class _InfoChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SponsorSpot {
+  const _SponsorSpot({
+    required this.name,
+    required this.category,
+    required this.address,
+    required this.contribution,
+    required this.thankYouMessage,
+    required this.supports,
+    this.socialLinks = const {},
+    this.featured = false,
+  });
+
+  final String name;
+  final String category;
+  final String address;
+  final String contribution;
+  final String thankYouMessage;
+  final List<String> supports;
+  final Map<String, String> socialLinks;
+  final bool featured;
 }
 
 class _NearbyBarView {
@@ -986,6 +1912,26 @@ String _buildAddress(BarSpot bar) {
   return parts.join(', ');
 }
 
+Future<void> _openGalleryViewer(
+  BuildContext context, {
+  required String title,
+  required List<String> images,
+  required int initialIndex,
+}) async {
+  if (images.isEmpty) {
+    return;
+  }
+
+  await showDialog<void>(
+    context: context,
+    builder: (_) => _GalleryViewerDialog(
+      title: title,
+      images: images,
+      initialIndex: initialIndex,
+    ),
+  );
+}
+
 Future<void> _openNavigation(
   BuildContext context,
   _NearbyBarView view,
@@ -1021,4 +1967,63 @@ Future<void> _openNavigation(
       content: Text('Nessuna app di navigazione disponibile sul dispositivo.'),
     ),
   );
+}
+
+Future<void> _launchExternalLink(
+  BuildContext context,
+  String url, {
+  required String failureMessage,
+}) async {
+  final uri = Uri.tryParse(url);
+  if (uri == null) {
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(failureMessage)),
+    );
+    return;
+  }
+
+  if (await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    return;
+  }
+
+  if (!context.mounted) {
+    return;
+  }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(failureMessage)),
+  );
+}
+
+String _socialLabel(String key) {
+  switch (key.toLowerCase()) {
+    case 'instagram':
+      return 'Instagram';
+    case 'facebook':
+      return 'Facebook';
+    case 'tiktok':
+      return 'TikTok';
+    case 'website':
+      return 'Sito web';
+    default:
+      return key;
+  }
+}
+
+IconData _socialIcon(String key) {
+  switch (key.toLowerCase()) {
+    case 'instagram':
+      return Icons.camera_alt_rounded;
+    case 'facebook':
+      return Icons.thumb_up_alt_rounded;
+    case 'tiktok':
+      return Icons.music_note_rounded;
+    case 'website':
+      return Icons.language_rounded;
+    default:
+      return Icons.open_in_new_rounded;
+  }
 }
