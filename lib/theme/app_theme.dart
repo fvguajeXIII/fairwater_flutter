@@ -1,34 +1,29 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color deepOcean = Color(0xFF165EA3);
-  static const Color ocean = Color(0xFF2078CE);
-  static const Color aqua = Color(0xFF5EAEEA);
-  static const Color mist = Color(0xFFEAF4FF);
-  static const Color foam = Color(0xFFF5FAFF);
-  static const Color ink = Color(0xFF16324F);
-  static const Color slate = Color(0xFF667D96);
-  static const Color border = Color(0xFFD8E6F5);
-  static const Color borderStrong = Color(0xFFC5D9EE);
-  static const Color line = Color(0xFFE6EEF8);
-  static const Color surfaceAlt = Color(0xFFF1F7FE);
-  static const Color surfaceMuted = Color(0xFFF7FAFD);
-  static const Color iconMuted = Color(0xFF8EA4BD);
+  static const Color deepOcean = Color(0xFF0E5E78);
+  static const Color ocean = Color(0xFF1696B5);
+  static const Color aqua = Color(0xFF69D5E7);
+  static const Color mist = Color(0xFFEAFBFF);
+  static const Color foam = Color(0xFFF6FDFF);
+  static const Color ink = Color(0xFF123847);
+  static const Color slate = Color(0xFF5F7C88);
   static const Color success = Color(0xFF1D9A67);
 }
 
 class AppTheme {
   static ThemeData get light {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.ocean,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: AppColors.ocean,
-      secondary: AppColors.aqua,
-      tertiary: AppColors.deepOcean,
-      surface: Colors.white,
-      onSurface: AppColors.ink,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.ocean,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: AppColors.ocean,
+          secondary: AppColors.aqua,
+          tertiary: AppColors.deepOcean,
+          surface: Colors.white,
+          onSurface: AppColors.ink,
+        );
 
     return ThemeData(
       useMaterial3: true,
@@ -57,11 +52,7 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           color: AppColors.ink,
         ),
-        bodyLarge: TextStyle(
-          fontSize: 15,
-          color: AppColors.ink,
-          height: 1.45,
-        ),
+        bodyLarge: TextStyle(fontSize: 15, color: AppColors.ink, height: 1.45),
         bodyMedium: TextStyle(
           fontSize: 13,
           color: AppColors.slate,
@@ -76,34 +67,29 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: Colors.white,
-        shadowColor: AppColors.deepOcean.withOpacity(0.10),
+        shadowColor: AppColors.deepOcean.withValues(alpha: 0.10),
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.ocean,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.ocean.withOpacity(0.45),
+          disabledBackgroundColor: AppColors.ocean.withValues(alpha: 0.45),
           disabledForegroundColor: Colors.white70,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),
           ),
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-          ),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.deepOcean,
-          side: const BorderSide(color: AppColors.border),
+          side: const BorderSide(color: Color(0xFFD5EBF1)),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -114,18 +100,18 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        hintStyle: const TextStyle(fontSize: 14, color: AppColors.iconMuted),
+        hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF91AAB4)),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(color: Color(0xFFD7EAF1)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: const BorderSide(color: Color(0xFFD7EAF1)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
@@ -158,7 +144,7 @@ class AppDecorations {
   static const LinearGradient shellGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFF5FAFF), Color(0xFFEAF4FF), Color(0xFFFAFCFF)],
+    colors: [Color(0xFFF4FDFF), Color(0xFFE5F8FD), Color(0xFFF8FDFF)],
   );
 
   static const LinearGradient heroGradient = LinearGradient(
@@ -174,14 +160,14 @@ class AppDecorations {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withOpacity(0.90),
-          Colors.white.withOpacity(0.68),
+          Colors.white.withValues(alpha: 0.90),
+          Colors.white.withValues(alpha: 0.68),
         ],
       ),
-      border: Border.all(color: Colors.white.withOpacity(0.62)),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.62)),
       boxShadow: [
         BoxShadow(
-          color: AppColors.deepOcean.withOpacity(0.12),
+          color: AppColors.deepOcean.withValues(alpha: 0.12),
           blurRadius: 28,
           offset: const Offset(0, 16),
         ),
@@ -191,11 +177,7 @@ class AppDecorations {
 }
 
 class WaterBottleBadge extends StatelessWidget {
-  const WaterBottleBadge({
-    super.key,
-    this.size = 84,
-    this.showGlow = true,
-  });
+  const WaterBottleBadge({super.key, this.size = 84, this.showGlow = true});
 
   final double size;
   final bool showGlow;
@@ -211,7 +193,7 @@ class WaterBottleBadge extends StatelessWidget {
         boxShadow: showGlow
             ? [
                 BoxShadow(
-                  color: AppColors.ocean.withOpacity(0.24),
+                  color: AppColors.ocean.withValues(alpha: 0.24),
                   blurRadius: 28,
                   offset: const Offset(0, 14),
                 ),
@@ -226,7 +208,7 @@ class WaterBottleBadge extends StatelessWidget {
             height: size * 0.62,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.16),
+              color: Colors.white.withValues(alpha: 0.16),
             ),
           ),
           Icon(
@@ -240,7 +222,7 @@ class WaterBottleBadge extends StatelessWidget {
               width: size * 0.18,
               height: size * 0.18,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.82),
+                color: Colors.white.withValues(alpha: 0.82),
                 borderRadius: BorderRadius.circular(size * 0.08),
               ),
             ),
@@ -252,10 +234,7 @@ class WaterBottleBadge extends StatelessWidget {
 }
 
 class WaterBackdrop extends StatelessWidget {
-  const WaterBackdrop({
-    super.key,
-    required this.child,
-  });
+  const WaterBackdrop({super.key, required this.child});
 
   final Widget child;
 
@@ -268,17 +247,23 @@ class WaterBackdrop extends StatelessWidget {
           Positioned(
             top: -80,
             right: -30,
-            child: _Bubble(size: 220, color: AppColors.aqua.withOpacity(0.12)),
+            child: _Bubble(
+              size: 220,
+              color: AppColors.aqua.withValues(alpha: 0.12),
+            ),
           ),
           const Positioned(
             top: 110,
             left: -40,
-            child: _Bubble(size: 150, color: Color(0x1A5EAEEA)),
+            child: _Bubble(size: 150, color: Color(0x1A69D5E7)),
           ),
           Positioned(
             bottom: -70,
             right: 20,
-            child: _Bubble(size: 180, color: AppColors.ocean.withOpacity(0.08)),
+            child: _Bubble(
+              size: 180,
+              color: AppColors.ocean.withValues(alpha: 0.08),
+            ),
           ),
           child,
         ],
@@ -298,10 +283,7 @@ class _Bubble extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     );
   }
 }
