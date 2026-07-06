@@ -7,11 +7,13 @@ import 'screens/login_page.dart';
 import 'services/auth_service.dart';
 import 'services/biometric_auth_service.dart';
 import 'services/login_preferences_service.dart';
+import 'services/refill_notification_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
+    await RefillNotificationService.instance.initialize();
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );

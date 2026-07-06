@@ -350,7 +350,7 @@ class _LoginSheetState extends State<_LoginSheet> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFF9FEFF), Color(0xFFEAFBFF)],
+            colors: [AppColors.foam, AppColors.mist],
           ),
           borderRadius: BorderRadius.vertical(top: Radius.circular(34)),
         ),
@@ -364,7 +364,7 @@ class _LoginSheetState extends State<_LoginSheet> {
                 width: 46,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD2EAF1),
+                  color: AppColors.borderStrong,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -402,7 +402,7 @@ class _LoginSheetState extends State<_LoginSheet> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFD9EDF3)),
+                border: Border.all(color: AppColors.border),
               ),
               child: Form(
                 key: _formKey,
@@ -588,7 +588,7 @@ class _PreferenceTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFD9EDF3)),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
@@ -648,7 +648,7 @@ class _SocialBtn extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         backgroundColor: dark ? AppColors.ink : Colors.white,
         side: BorderSide(
-          color: dark ? AppColors.ink : const Color(0xFFD8EAF0),
+          color: dark ? AppColors.ink : AppColors.border,
         ),
       ),
       child: Row(

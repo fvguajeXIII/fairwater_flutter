@@ -1,1 +1,70 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"fairwater-app","appId":"1:574931919668:android:a0dc4f14c68de31b963b61","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"fairwater-app","configurations":{"android":"1:574931919668:android:a0dc4f14c68de31b963b61","ios":"1:574931919668:ios:a81c64e2c7778a0a963b61","web":"1:574931919668:web:5f62017a0dc5a774963b61"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "fairwater-app",
+          "appId": "1:574931919668:android:a0dc4f14c68de31b963b61",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "fairwater-app",
+          "configurations": {
+            "android": "1:574931919668:android:a0dc4f14c68de31b963b61",
+            "ios": "1:574931919668:ios:a81c64e2c7778a0a963b61",
+            "web": "1:574931919668:web:5f62017a0dc5a774963b61"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "hosting": [
+    {
+      "target": "public",
+      "public": "build/web",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "target": "admin",
+      "public": "admin_crm/dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "source": "**/*.@(js|css)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public,max-age=300"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

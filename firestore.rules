@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function currentUserDocPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function currentUserData() {
+      return get(currentUserDocPath()).data;
+    }
+
+    function currentUserExists() {
+      return signedIn() && exists(currentUserDocPath());
+    }
+
+    function hasRole(role) {
+      return currentUserExists() &&
+        currentUserData().roles is list &&
+        role in currentUserData().roles;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isActiveUser() {
+      return currentUserExists() && currentUserData().status == 'active';
+    }
+
+    function isSelf(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function managesRefillPoint(refillPointId) {
+      return currentUserExists() &&
+        currentUserData().managedRefillPointIds is list &&
+        refillPointId in currentUserData().managedRefillPointIds;
+    }
+
+    function managesSponsor(sponsorId) {
+      return currentUserExists() &&
+        currentUserData().managedSponsorIds is list &&
+        sponsorId in currentUserData().managedSponsorIds;
+    }
+
+    function publishedResource() {
+      return resource.data.status == 'published' &&
+        resource.data.visibility == 'public';
+    }
+
+    match /users/{userId} {
+      allow read: if isAdmin() || isSelf(userId);
+
+      allow create: if isAdmin() || (
+        isSelf(userId) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.roles == ['user'] &&
+        request.resource.data.accountType == 'user' &&
+        request.resource.data.status == 'active'
+      );
+
+      allow update: if isAdmin() || (
+        isSelf(userId) &&
+        request.resource.data.roles == resource.data.roles &&
+        request.resource.data.accountType == resource.data.accountType &&
+        request.resource.data.status == resource.data.status &&
+        request.resource.data.managedRefillPointIds == resource.data.managedRefillPointIds &&
+        request.resource.data.managedSponsorIds == resource.data.managedSponsorIds
+      );
+
+      allow delete: if false;
+    }
+
+    match /users/{userId}/refill_events/{eventId} {
+      allow read: if isAdmin() || isSelf(userId);
+      allow create: if isAdmin() || isSelf(userId);
+      allow update, delete: if false;
+    }
+
+    match /refill_points/{refillPointId} {
+      allow read: if publishedResource() || isAdmin() || managesRefillPoint(refillPointId);
+      allow create, update: if isAdmin() || managesRefillPoint(refillPointId);
+      allow delete: if isAdmin();
+    }
+
+    match /bars/{barId} {
+      allow read: if signedIn();
+      allow create, update, delete: if true;
+    }
+
+    match /sponsors/{sponsorId} {
+      allow read: if signedIn() || publishedResource() || isAdmin() || managesSponsor(sponsorId);
+      allow create, update, delete: if true;
+    }
+
+    match /user_invites/{inviteId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    match /community/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

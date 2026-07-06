@@ -1,0 +1,17 @@
+{
+  "projects": {
+    "default": "fairwater-app"
+  },
+  "targets": {
+    "fairwater-app": {
+      "hosting": {
+        "public": [
+          "fairwater-app"
+        ],
+        "admin": [
+          "fairwater-admin"
+        ]
+      }
+    }
+  }
+}

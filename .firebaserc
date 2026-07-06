@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "crm": "fairwater-app"
+  },
+  "targets": {
+    "fairwater-app": {
+      "hosting": {
+        "admin": [
+          "fairwater-admin"
+        ],
+        "public": [
+          "fairwater-app"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

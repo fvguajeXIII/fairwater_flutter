@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -8,6 +10,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/bar_service.dart';
 import '../services/profile_service.dart';
+import '../services/refill_notification_service.dart';
+import '../services/sponsor_service.dart';
 import '../theme/app_theme.dart';
 import 'profile_page.dart';
 import 'qr_scanner_page.dart';
@@ -16,72 +20,81 @@ const Color _kPrimary = AppColors.ocean;
 const Color _kPrimaryDark = AppColors.deepOcean;
 const Color _kSurface = AppColors.foam;
 const double _kNearbyRadiusMeters = 5000;
-const List<_SponsorSpot> _kSampleSponsors = [
-  _SponsorSpot(
+const List<SponsorSpot> _kSampleSponsors = [
+  const SponsorSpot(
+    id: 'emporio-del-corso',
     name: 'Emporio del Corso',
     category: 'Market di quartiere',
     address: 'Corso Italia 18, Fondi',
     contribution: 'Supporto logistico e materiali per gli eventi.',
     thankYouMessage:
         'Grazie per aver creduto nel progetto fin dal primo momento e per averci aiutato a coinvolgere il quartiere.',
-    supports: ['Eventi locali', 'Materiali', 'Presenza sul territorio'],
-    socialLinks: {
+    supports: const ['Eventi locali', 'Materiali', 'Presenza sul territorio'],
+    socialLinks: const {
       'instagram': 'https://www.instagram.com/emporiodelcorso',
       'facebook': 'https://www.facebook.com/emporiodelcorso',
     },
     featured: true,
   ),
-  _SponsorSpot(
+  const SponsorSpot(
+    id: 'pasticceria-la-portella',
     name: 'Pasticceria La Portella',
     category: 'Pasticceria artigianale',
     address: 'Via Roma 42, Fondi',
     contribution: 'Accoglienza durante presentazioni e giornate divulgative.',
     thankYouMessage:
         'Il vostro contributo ha reso gli incontri con la comunita piu calorosi, accessibili e partecipati.',
-    supports: ['Accoglienza', 'Degustazioni', 'Eventi'],
-    socialLinks: {
+    supports: const ['Accoglienza', 'Degustazioni', 'Eventi'],
+    socialLinks: const {
       'instagram': 'https://www.instagram.com/pasticcerialaportella',
       'website': 'https://www.pasticcerialaportella.it',
     },
+    featured: false,
   ),
-  _SponsorSpot(
+  const SponsorSpot(
+    id: 'cartolibreria-aurora',
     name: 'Cartolibreria Aurora',
     category: 'Cartoleria e libreria',
     address: 'Viale Vittorio Emanuele III 7, Fondi',
     contribution: 'Stampa di materiali informativi e supporti promozionali.',
     thankYouMessage:
         'Grazie per averci aiutato a raccontare il progetto con materiali chiari, curati e sempre disponibili.',
-    supports: ['Volantini', 'Locandine', 'Comunicazione'],
-    socialLinks: {
+    supports: const ['Volantini', 'Locandine', 'Comunicazione'],
+    socialLinks: const {
       'facebook': 'https://www.facebook.com/cartolibreriaaurora',
       'instagram': 'https://www.instagram.com/cartolibreriaaurora',
     },
+    featured: false,
   ),
-  _SponsorSpot(
+  const SponsorSpot(
+    id: 'officina-verde',
     name: 'Officina Verde',
     category: 'Mobilita sostenibile',
     address: 'Via Appia Lato Roma 95, Fondi',
     contribution: 'Supporto tecnico per iniziative legate a mobilita e territorio.',
     thankYouMessage:
         'La vostra sensibilita verso il territorio ha dato forza concreta alla visione del progetto.',
-    supports: ['Territorio', 'Tecnica', 'Sostenibilita'],
-    socialLinks: {
+    supports: const ['Territorio', 'Tecnica', 'Sostenibilita'],
+    socialLinks: const {
       'instagram': 'https://www.instagram.com/officinaverdefondi',
       'website': 'https://www.officinaverdefondi.it',
     },
+    featured: false,
   ),
-  _SponsorSpot(
+  const SponsorSpot(
+    id: 'erboristeria-san-magno',
     name: 'Erboristeria San Magno',
     category: 'Benessere e prodotti naturali',
     address: 'Piazza Unita d Italia 11, Fondi',
     contribution: 'Sostegno economico e visibilita alle attivita di lancio.',
     thankYouMessage:
         'Grazie per il sostegno ricevuto: il vostro aiuto ha contribuito davvero alla realizzazione del progetto.',
-    supports: ['Sponsorizzazione', 'Benessere', 'Community'],
-    socialLinks: {
+    supports: const ['Sponsorizzazione', 'Benessere', 'Community'],
+    socialLinks: const {
       'instagram': 'https://www.instagram.com/erboristeriasanmagno',
       'facebook': 'https://www.facebook.com/erboristeriasanmagno',
     },
+    featured: false,
   ),
 ];
 
@@ -96,7 +109,10 @@ class _HomePageState extends State<HomePage> {
   final AuthService _authService = AuthService();
   final BarService _barService = BarService();
   final ProfileService _profileService = ProfileService();
+  final SponsorService _sponsorService = SponsorService();
   final MapController _mapController = MapController();
+  final RefillNotificationService _refillNotificationService =
+      RefillNotificationService.instance;
 
   int _selectedIndex = 0;
   Position? _position;
@@ -105,12 +121,23 @@ class _HomePageState extends State<HomePage> {
   bool _mapReady = false;
   LatLng? _pendingMapCenter;
   bool _seedingBars = false;
+  StreamSubscription<List<BarSpot>>? _barsSubscription;
+  StreamSubscription<Position>? _positionSubscription;
+  List<BarSpot> _latestBars = const <BarSpot>[];
 
   @override
   void initState() {
     super.initState();
     _seedBarsIfNeeded();
+    _listenBarsForNotifications();
     _loadLocation();
+  }
+
+  @override
+  void dispose() {
+    _barsSubscription?.cancel();
+    _positionSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _seedBarsIfNeeded() async {
@@ -163,6 +190,11 @@ class _HomePageState extends State<HomePage> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
+      _position = current;
+      await _refillNotificationService.requestPermissions();
+      await _refillNotificationService.checkNearbyRefills(current);
+      _startPositionMonitoring();
+
       if (!mounted) return;
       setState(() {
         _position = current;
@@ -183,6 +215,50 @@ class _HomePageState extends State<HomePage> {
         _loadingLocation = false;
       });
     }
+  }
+
+  void _listenBarsForNotifications() {
+    _barsSubscription = _barService.watchBars().listen((bars) async {
+      _latestBars = bars;
+      _refillNotificationService.updateBars(bars);
+
+      final currentPosition = _position;
+      if (currentPosition != null) {
+        await _refillNotificationService.checkNearbyRefills(currentPosition);
+      }
+    });
+  }
+
+  void _startPositionMonitoring() {
+    if (_positionSubscription != null) {
+      return;
+    }
+
+    const settings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 25,
+    );
+
+    _positionSubscription =
+        Geolocator.getPositionStream(locationSettings: settings).listen((
+          position,
+        ) async {
+          if (!mounted) {
+            return;
+          }
+
+          setState(() {
+            _position = position;
+            _locationError = null;
+            _loadingLocation = false;
+          });
+
+          _queueMapMove(LatLng(position.latitude, position.longitude));
+
+          if (_latestBars.isNotEmpty) {
+            await _refillNotificationService.checkNearbyRefills(position);
+          }
+        });
   }
 
   LatLng get _currentLatLng {
@@ -407,31 +483,38 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildSponsorTab() {
-    final sponsors = _kSampleSponsors;
+    return StreamBuilder<List<SponsorSpot>>(
+      stream: _sponsorService.watchSponsors(),
+      builder: (context, snapshot) {
+        final firestoreSponsors = snapshot.data ?? const <SponsorSpot>[];
+        final sponsors =
+            firestoreSponsors.isNotEmpty ? firestoreSponsors : _kSampleSponsors;
 
-    return WaterBackdrop(
-      child: SafeArea(
-        bottom: false,
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    if (index.isOdd) {
-                      return const SizedBox(height: 14);
-                    }
-                    final sponsor = sponsors[index ~/ 2];
-                    return _SponsorCard(sponsor: sponsor);
-                  },
-                  childCount: sponsors.length * 2 - 1,
+        return WaterBackdrop(
+          child: SafeArea(
+            bottom: false,
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        if (index.isOdd) {
+                          return const SizedBox(height: 14);
+                        }
+                        final sponsor = sponsors[index ~/ 2];
+                        return _SponsorCard(sponsor: sponsor);
+                      },
+                      childCount: sponsors.length * 2 - 1,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -540,7 +623,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? _kPrimaryDark : Colors.blueGrey.shade400;
+    final color = selected ? _kPrimaryDark : AppColors.iconMuted;
     final bg = selected ? AppColors.mist : Colors.transparent;
 
     return InkWell(
@@ -627,7 +710,7 @@ class _PlaceholderTab extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFEAF4FF), _kSurface],
+          colors: [AppColors.mist, _kSurface],
         ),
       ),
       child: SafeArea(
@@ -659,7 +742,7 @@ class _PlaceholderTab extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF16324F),
+                    color: AppColors.ink,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -669,7 +752,7 @@ class _PlaceholderTab extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.5,
-                    color: Colors.blueGrey.shade600,
+                    color: AppColors.slate,
                   ),
                 ),
               ],
@@ -700,7 +783,7 @@ class _RefillSpotCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE2EAF2)),
+        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.035),
@@ -720,7 +803,7 @@ class _RefillSpotCard extends StatelessWidget {
                 height: 48,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: const Color(0xFFF3F7FB),
+                  color: AppColors.surfaceAlt,
                 ),
                 child: const Icon(
                   Icons.storefront_rounded,
@@ -741,7 +824,7 @@ class _RefillSpotCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 19,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF16324F),
+                              color: AppColors.ink,
                             ),
                           ),
                         ),
@@ -752,7 +835,7 @@ class _RefillSpotCard extends StatelessWidget {
                               vertical: 5,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF3F7FB),
+                              color: AppColors.surfaceAlt,
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: const Text(
@@ -813,7 +896,7 @@ class _RefillSpotCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          const Divider(height: 1, color: Color(0xFFECF1F5)),
+          const Divider(height: 1, color: AppColors.line),
           const SizedBox(height: 20),
           const _SectionHeader(title: 'Servizi offerti'),
           const SizedBox(height: 12),
@@ -830,7 +913,7 @@ class _RefillSpotCard extends StatelessWidget {
                 .toList(),
           ),
           const SizedBox(height: 20),
-          const Divider(height: 1, color: Color(0xFFECF1F5)),
+          const Divider(height: 1, color: AppColors.line),
           const SizedBox(height: 20),
           const _SectionHeader(title: 'Social'),
           const SizedBox(height: 12),
@@ -839,7 +922,7 @@ class _RefillSpotCard extends StatelessWidget {
               'Pagine social in aggiornamento.',
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.blueGrey.shade600,
+                color: AppColors.slate,
               ),
             )
           else
@@ -870,7 +953,7 @@ class _RefillSpotCard extends StatelessWidget {
 class _SponsorCard extends StatelessWidget {
   const _SponsorCard({required this.sponsor});
 
-  final _SponsorSpot sponsor;
+  final SponsorSpot sponsor;
 
   @override
   Widget build(BuildContext context) {
@@ -882,7 +965,7 @@ class _SponsorCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE2EAF2)),
+        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.035),
@@ -902,7 +985,7 @@ class _SponsorCard extends StatelessWidget {
                 height: 48,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: const Color(0xFFF3F7FB),
+                  color: AppColors.surfaceAlt,
                 ),
                 child: const Icon(
                   Icons.handshake_rounded,
@@ -923,7 +1006,7 @@ class _SponsorCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 19,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF16324F),
+                              color: AppColors.ink,
                             ),
                           ),
                         ),
@@ -934,7 +1017,7 @@ class _SponsorCard extends StatelessWidget {
                               vertical: 5,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF3F7FB),
+                              color: AppColors.surfaceAlt,
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: const Text(
@@ -984,12 +1067,12 @@ class _SponsorCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 height: 1.5,
-                color: Colors.blueGrey.shade700,
+                color: AppColors.ink,
               ),
             ),
           ),
           const SizedBox(height: 20),
-          const Divider(height: 1, color: Color(0xFFECF1F5)),
+          const Divider(height: 1, color: AppColors.line),
           const SizedBox(height: 20),
           const _SectionHeader(title: 'Contributo al progetto'),
           const SizedBox(height: 12),
@@ -1006,7 +1089,7 @@ class _SponsorCard extends StatelessWidget {
                 .toList(),
           ),
           const SizedBox(height: 20),
-          const Divider(height: 1, color: Color(0xFFECF1F5)),
+          const Divider(height: 1, color: AppColors.line),
           const SizedBox(height: 20),
           const _SectionHeader(title: 'Social'),
           const SizedBox(height: 12),
@@ -1015,7 +1098,7 @@ class _SponsorCard extends StatelessWidget {
               'Pagine social in aggiornamento.',
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.blueGrey.shade600,
+                color: AppColors.slate,
               ),
             )
           else
@@ -1108,7 +1191,7 @@ class _GalleryImage extends StatelessWidget {
           return child;
         }
         return Container(
-          color: const Color(0xFFF4F7FA),
+          color: AppColors.surfaceAlt,
           alignment: Alignment.center,
           child: const SizedBox(
             width: 24,
@@ -1119,7 +1202,7 @@ class _GalleryImage extends StatelessWidget {
       },
       errorBuilder: (context, error, stackTrace) {
         return Container(
-          color: const Color(0xFFF4F7FA),
+          color: AppColors.surfaceAlt,
           alignment: Alignment.center,
           child: const Icon(
             Icons.image_not_supported_outlined,
@@ -1150,7 +1233,7 @@ class _SectionHeader extends StatelessWidget {
           style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF16324F),
+            color: AppColors.ink,
           ),
         ),
         const Spacer(),
@@ -1160,7 +1243,7 @@ class _SectionHeader extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.blueGrey.shade500,
+              color: AppColors.slate,
             ),
           ),
       ],
@@ -1184,7 +1267,7 @@ class _RefillDetailRow extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 2),
-          child: Icon(icon, size: 15, color: Colors.blueGrey.shade400),
+          child: Icon(icon, size: 15, color: AppColors.iconMuted),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -1193,7 +1276,7 @@ class _RefillDetailRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               height: 1.45,
-              color: Colors.blueGrey.shade600,
+              color: AppColors.slate,
             ),
           ),
         ),
@@ -1363,7 +1446,7 @@ class _SocialLinkButton extends StatelessWidget {
       label: Text(label),
       style: OutlinedButton.styleFrom(
         foregroundColor: _kPrimaryDark,
-        side: const BorderSide(color: Color(0xFFE2EAF2)),
+        side: const BorderSide(color: AppColors.border),
         backgroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         shape: RoundedRectangleBorder(
@@ -1389,7 +1472,7 @@ class _EmptyRefillCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE2EAF2)),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1399,7 +1482,7 @@ class _EmptyRefillCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF16324F),
+              color: AppColors.ink,
             ),
           ),
           const SizedBox(height: 8),
@@ -1408,7 +1491,7 @@ class _EmptyRefillCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               height: 1.4,
-              color: Colors.blueGrey.shade600,
+              color: AppColors.slate,
             ),
           ),
         ],
@@ -1445,7 +1528,7 @@ class _LiveMapCard extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E73C6).withValues(alpha: 0.10),
+            color: AppColors.ocean.withValues(alpha: 0.10),
             blurRadius: 28,
             offset: const Offset(0, 16),
           ),
@@ -1551,7 +1634,7 @@ class _CurrentLocationMarker extends StatelessWidget {
           height: 72,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0xFF1E73C6).withValues(alpha: 0.14),
+            color: AppColors.ocean.withValues(alpha: 0.14),
           ),
         ),
         Container(
@@ -1560,10 +1643,10 @@ class _CurrentLocationMarker extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.white,
-            border: Border.all(color: const Color(0xFF1E73C6), width: 6),
+            border: Border.all(color: AppColors.ocean, width: 6),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF1E73C6).withValues(alpha: 0.18),
+                color: AppColors.ocean.withValues(alpha: 0.18),
                 blurRadius: 18,
               ),
             ],
@@ -1610,7 +1693,7 @@ class _MapBarMarker extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  color: highlighted ? _kPrimary : Colors.blueGrey.shade700,
+                  color: highlighted ? _kPrimary : AppColors.ink,
                 ),
               ),
               const SizedBox(height: 1),
@@ -1619,7 +1702,7 @@ class _MapBarMarker extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF16324F),
+                  color: AppColors.ink,
                 ),
               ),
             ],
@@ -1629,12 +1712,12 @@ class _MapBarMarker extends StatelessWidget {
           width: 18,
           height: 18,
           decoration: BoxDecoration(
-            color: highlighted ? _kPrimary : const Color(0xFF64A8E1),
+            color: highlighted ? _kPrimary : AppColors.aqua,
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 3),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF1E73C6).withValues(alpha: 0.22),
+                color: AppColors.ocean.withValues(alpha: 0.22),
                 blurRadius: 12,
                 spreadRadius: 2,
               ),
@@ -1701,7 +1784,7 @@ class _BarCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF16324F),
+                              color: AppColors.ink,
                             ),
                           ),
                         ),
@@ -1713,7 +1796,7 @@ class _BarCard extends StatelessWidget {
                       _buildAddress(view.bar),
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.blueGrey.shade600,
+                        color: AppColors.slate,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -1761,7 +1844,7 @@ class _DistanceBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF4FF),
+        color: AppColors.mist,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -1795,7 +1878,7 @@ class _EmptyNearbyBarsCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF16324F),
+              color: AppColors.ink,
             ),
           ),
           const SizedBox(height: 8),
@@ -1804,7 +1887,7 @@ class _EmptyNearbyBarsCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               height: 1.4,
-              color: Colors.blueGrey.shade600,
+              color: AppColors.slate,
             ),
           ),
         ],
@@ -1824,49 +1907,27 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        border: Border.all(color: const Color(0xFFE3EAF1)),
+        color: AppColors.surfaceMuted,
+        border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: Colors.blueGrey.shade500),
+          Icon(icon, size: 14, color: AppColors.slate),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: Colors.blueGrey.shade700,
+              color: AppColors.ink,
             ),
           ),
         ],
       ),
     );
   }
-}
-
-class _SponsorSpot {
-  const _SponsorSpot({
-    required this.name,
-    required this.category,
-    required this.address,
-    required this.contribution,
-    required this.thankYouMessage,
-    required this.supports,
-    this.socialLinks = const {},
-    this.featured = false,
-  });
-
-  final String name;
-  final String category;
-  final String address;
-  final String contribution;
-  final String thankYouMessage;
-  final List<String> supports;
-  final Map<String, String> socialLinks;
-  final bool featured;
 }
 
 class _NearbyBarView {

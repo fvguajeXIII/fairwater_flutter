@@ -681,7 +681,7 @@ class _ImpactCard extends StatelessWidget {
                       label: Text(action.label),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _kProfilePrimaryDark,
-                        side: const BorderSide(color: Color(0xFFDCE8F3)),
+                        side: const BorderSide(color: AppColors.border),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14,
                           vertical: 11,
@@ -783,7 +783,7 @@ class _SectionHeading extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             height: 1.45,
-            color: Colors.blueGrey.shade600,
+            color: AppColors.slate,
           ),
         ),
       ],
@@ -803,7 +803,7 @@ class _MetricTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.mist,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFDDEAF6)),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -823,7 +823,7 @@ class _MetricTile extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: Colors.blueGrey.shade600,
+              color: AppColors.slate,
             ),
           ),
           const SizedBox(height: 8),
@@ -841,7 +841,7 @@ class _MetricTile extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               height: 1.4,
-              color: Colors.blueGrey.shade600,
+              color: AppColors.slate,
             ),
           ),
         ],
@@ -871,7 +871,7 @@ class _MilestoneTile extends StatelessWidget {
         border: Border.all(
           color: milestone.completed
               ? const Color(0xFFCBEED9)
-              : const Color(0xFFE3ECF4),
+              : AppColors.line,
         ),
       ),
       child: Column(
@@ -913,7 +913,7 @@ class _MilestoneTile extends StatelessWidget {
                       milestone.description,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.blueGrey.shade600,
+                        color: AppColors.slate,
                       ),
                     ),
                   ],
@@ -927,7 +927,7 @@ class _MilestoneTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: milestone.completed
                       ? const Color(0xFF17A05D)
-                      : const Color(0xFFEAF4FF),
+                      : AppColors.mist,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -951,7 +951,7 @@ class _MilestoneTile extends StatelessWidget {
             child: LinearProgressIndicator(
               minHeight: 9,
               value: progress,
-              backgroundColor: const Color(0xFFDDE8F2),
+              backgroundColor: AppColors.borderStrong,
               valueColor: AlwaysStoppedAnimation<Color>(
                 milestone.completed
                     ? const Color(0xFF17A05D)
@@ -984,7 +984,7 @@ class _ProfileInfoPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.82),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE4ECF4)),
+        border: Border.all(color: AppColors.line),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1001,7 +1001,7 @@ class _ProfileInfoPill extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: Colors.blueGrey.shade500,
+                    color: AppColors.slate,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -1086,7 +1086,7 @@ class _NextWellProgress extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.84),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE3ECF4)),
+        border: Border.all(color: AppColors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1096,7 +1096,7 @@ class _NextWellProgress extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
-              color: Colors.blueGrey.shade700,
+              color: AppColors.ink,
             ),
           ),
           const SizedBox(height: 10),
@@ -1105,7 +1105,7 @@ class _NextWellProgress extends StatelessWidget {
             child: LinearProgressIndicator(
               minHeight: 10,
               value: solidarity.nextWellProgress,
-              backgroundColor: const Color(0xFFDDE8F2),
+              backgroundColor: AppColors.borderStrong,
               valueColor: const AlwaysStoppedAnimation<Color>(_kProfilePrimary),
             ),
           ),
@@ -1117,7 +1117,7 @@ class _NextWellProgress extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               height: 1.4,
-              color: Colors.blueGrey.shade600,
+              color: AppColors.slate,
             ),
           ),
         ],

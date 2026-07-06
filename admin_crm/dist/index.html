@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FairWater Admin</title>
+    <meta
+      name="description"
+      content="CRM FairWater per la gestione di utenti, sponsor e punti refill."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="login-shell" id="login-shell">
+      <div class="login-panel">
+        <div class="login-brand">
+          <div class="brand-mark">FW</div>
+          <div>
+            <p class="eyebrow login-eyebrow">Accesso riservato</p>
+            <h1>FairWater CRM</h1>
+          </div>
+        </div>
+
+        <div class="login-copy">
+          <h2>Accedi al pannello amministrativo</h2>
+          <p>
+            Inserisci le credenziali temporanee per gestire utenti, sponsor e
+            punti refill.
+          </p>
+        </div>
+
+        <form class="login-form" id="login-form">
+          <label class="field">
+            <span>Username</span>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              autocomplete="username"
+              placeholder="Inserisci username"
+              required
+            />
+          </label>
+
+          <label class="field">
+            <span>Password</span>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              placeholder="Inserisci password"
+              required
+            />
+          </label>
+
+          <p class="login-error" id="login-error" aria-live="polite"></p>
+
+          <button class="login-button" type="submit">Entra nel CRM</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">FW</div>
+          <div>
+            <p class="eyebrow">admin.fairwater.it</p>
+            <h1>FairWater CRM</h1>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <button class="nav-link is-active" data-view="dashboard">
+            Dashboard
+          </button>
+          <button class="nav-link" data-view="users">Utenti</button>
+          <button class="nav-link" data-view="refill">Punti refill</button>
+          <button class="nav-link" data-view="sponsors">Sponsor</button>
+          <button class="nav-link" data-view="roles">Ruoli e accessi</button>
+          <button class="nav-link" data-view="deploy">Deploy</button>
+        </nav>
+
+        <div class="sidebar-card">
+          <p class="sidebar-title">Stato integrazione</p>
+          <ul class="status-list">
+            <li>Login CRM attivo</li>
+            <li>FireStore collegato in realtime</li>
+            <li>CRUD refill pronto</li>
+            <li>CRUD sponsor pronto</li>
+          </ul>
+        </div>
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Pannello riservato</p>
+            <h2 id="view-title">Dashboard</h2>
+          </div>
+          <div class="topbar-actions">
+            <span class="pill" id="data-status">Firebase project: fairwater-app</span>
+            <span class="pill accent">Target: admin</span>
+            <button class="logout-button" id="logout-button" type="button">
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <section class="view is-visible" data-panel="dashboard">
+          <div class="hero">
+            <div>
+              <p class="eyebrow">Base operativa</p>
+              <h3>Gestisci utenti, refill e sponsor da un unico pannello</h3>
+              <p class="hero-copy">
+                Refill e sponsor vengono salvati su Firestore e compaiono
+                nell'app. I profili utente vengono gestiti nella collezione
+                `users`.
+              </p>
+            </div>
+            <div class="hero-note">
+              <strong>Stato del CRM</strong>
+              <p>
+                Dashboard collegata a Firebase con lettura e scrittura dei dati.
+              </p>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <article class="stat-card">
+              <span class="stat-label">Utenti</span>
+              <strong class="stat-value" id="users-count">0</strong>
+              <p class="stat-copy">Profili presenti nella collezione `users`.</p>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Refill</span>
+              <strong class="stat-value" id="bars-count">0</strong>
+              <p class="stat-copy">Punti refill letti e scritti su `bars`.</p>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Sponsor</span>
+              <strong class="stat-value" id="sponsors-count">0</strong>
+              <p class="stat-copy">Sponsor sincronizzati con `sponsors`.</p>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Stato</span>
+              <strong class="stat-value" id="crm-mode">Live</strong>
+              <p class="stat-copy">Le liste si aggiornano in tempo reale.</p>
+            </article>
+          </div>
+
+          <div class="split-grid">
+            <article class="panel-card">
+              <h3>Azioni rapide</h3>
+              <div class="quick-actions">
+                <button class="action-button" type="button" data-target="quick-user">
+                  Nuovo utente
+                </button>
+                <button class="action-button" type="button" data-target="quick-refill">
+                  Nuovo punto refill
+                </button>
+                <button class="action-button" type="button" data-target="quick-sponsor">
+                  Nuovo sponsor
+                </button>
+              </div>
+              <p class="helper-copy">
+                Usa questi moduli per inserire rapidamente nuovi contenuti dal CRM.
+              </p>
+            </article>
+
+            <article class="panel-card">
+              <h3>Nota utenti</h3>
+              <ul class="plain-list">
+                <li>Qui creiamo e gestiamo il profilo utente in Firestore.</li>
+                <li>Il vero accesso all'app resta legato a Firebase Auth.</li>
+                <li>Refill e sponsor invece sono gia collegati end-to-end.</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="editor-grid">
+            <article class="panel-card form-card" id="quick-user">
+              <h3>Nuovo utente</h3>
+              <form class="admin-form" id="dashboard-user-form">
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Nome</span>
+                    <input name="firstName" type="text" required />
+                  </label>
+                  <label class="field">
+                    <span>Cognome</span>
+                    <input name="lastName" type="text" required />
+                  </label>
+                </div>
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Email</span>
+                    <input name="email" type="email" required />
+                  </label>
+                  <label class="field">
+                    <span>Telefono</span>
+                    <input name="phone" type="text" />
+                  </label>
+                </div>
+                <div class="form-grid three">
+                  <label class="field">
+                    <span>Residenza</span>
+                    <input name="residence" type="text" />
+                  </label>
+                  <label class="field">
+                    <span>Ruolo</span>
+                    <select name="role">
+                      <option value="user">User</option>
+                      <option value="refill_manager">Refill manager</option>
+                      <option value="sponsor_manager">Sponsor manager</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Stato</span>
+                    <select name="status">
+                      <option value="active">Active</option>
+                      <option value="pending">Pending</option>
+                      <option value="suspended">Suspended</option>
+                    </select>
+                  </label>
+                </div>
+                <button class="primary-button" type="submit">
+                  Salva utente
+                </button>
+              </form>
+            </article>
+
+            <article class="panel-card form-card" id="quick-refill">
+              <h3>Nuovo punto refill</h3>
+              <form class="admin-form" id="dashboard-refill-form">
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Nome locale</span>
+                    <input name="name" type="text" required />
+                  </label>
+                  <label class="field">
+                    <span>Citta</span>
+                    <input name="city" type="text" required />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Indirizzo</span>
+                  <input name="address" type="text" required />
+                </label>
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Latitudine</span>
+                    <input name="latitude" type="number" step="any" required />
+                  </label>
+                  <label class="field">
+                    <span>Longitudine</span>
+                    <input name="longitude" type="number" step="any" required />
+                  </label>
+                </div>
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Refill info</span>
+                    <input name="refillInfo" type="text" value="Punto refill" />
+                  </label>
+                  <label class="field">
+                    <span>Orari</span>
+                    <input name="openInfo" type="text" value="Orari da confermare" />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Servizi separati da virgola</span>
+                  <input name="services" type="text" placeholder="Acqua fresca, Wi-Fi, Snack" />
+                </label>
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Instagram</span>
+                    <input name="instagram" type="url" />
+                  </label>
+                  <label class="field">
+                    <span>Facebook o sito</span>
+                    <input name="website" type="url" />
+                  </label>
+                </div>
+                <label class="check-field">
+                  <input name="featured" type="checkbox" />
+                  <span>Metti in evidenza</span>
+                </label>
+                <button class="primary-button" type="submit">
+                  Salva punto refill
+                </button>
+              </form>
+            </article>
+
+            <article class="panel-card form-card" id="quick-sponsor">
+              <h3>Nuovo sponsor</h3>
+              <form class="admin-form" id="dashboard-sponsor-form">
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Nome sponsor</span>
+                    <input name="name" type="text" required />
+                  </label>
+                  <label class="field">
+                    <span>Categoria</span>
+                    <input name="category" type="text" required />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Indirizzo</span>
+                  <input name="address" type="text" required />
+                </label>
+                <label class="field">
+                  <span>Contributo</span>
+                  <input name="contribution" type="text" required />
+                </label>
+                <label class="field">
+                  <span>Messaggio di ringraziamento</span>
+                  <textarea name="thankYouMessage" rows="3" required></textarea>
+                </label>
+                <label class="field">
+                  <span>Supporti separati da virgola</span>
+                  <input name="supports" type="text" placeholder="Eventi, Materiali, Community" />
+                </label>
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Instagram</span>
+                    <input name="instagram" type="url" />
+                  </label>
+                  <label class="field">
+                    <span>Sito web</span>
+                    <input name="website" type="url" />
+                  </label>
+                </div>
+                <label class="check-field">
+                  <input name="featured" type="checkbox" />
+                  <span>Metti in evidenza</span>
+                </label>
+                <button class="primary-button" type="submit">
+                  Salva sponsor
+                </button>
+              </form>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" data-panel="users">
+          <article class="panel-card">
+            <h3>Utenti registrati</h3>
+            <p>
+              Qui appare la lista dei profili presenti nella collezione `users`
+              dell'app.
+            </p>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Ruolo</th>
+                    <th>Stato</th>
+                    <th>Residenza</th>
+                  </tr>
+                </thead>
+                <tbody id="users-table-body"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" data-panel="refill">
+          <div class="editor-grid">
+            <article class="panel-card form-card">
+              <h3>Modifica punto refill</h3>
+              <form class="admin-form" id="refill-edit-form">
+                <input name="id" type="hidden" />
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Nome locale</span>
+                    <input name="name" type="text" required />
+                  </label>
+                  <label class="field">
+                    <span>Citta</span>
+                    <input name="city" type="text" required />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Indirizzo</span>
+                  <input name="address" type="text" required />
+                </label>
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Latitudine</span>
+                    <input name="latitude" type="number" step="any" required />
+                  </label>
+                  <label class="field">
+                    <span>Longitudine</span>
+                    <input name="longitude" type="number" step="any" required />
+                  </label>
+                </div>
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Refill info</span>
+                    <input name="refillInfo" type="text" />
+                  </label>
+                  <label class="field">
+                    <span>Orari</span>
+                    <input name="openInfo" type="text" />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Servizi separati da virgola</span>
+                  <input name="services" type="text" />
+                </label>
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Instagram</span>
+                    <input name="instagram" type="url" />
+                  </label>
+                  <label class="field">
+                    <span>Facebook o sito</span>
+                    <input name="website" type="url" />
+                  </label>
+                </div>
+                <label class="check-field">
+                  <input name="featured" type="checkbox" />
+                  <span>Metti in evidenza</span>
+                </label>
+                <button class="primary-button" type="submit">
+                  Aggiorna punto refill
+                </button>
+              </form>
+            </article>
+
+            <article class="panel-card">
+              <h3>Punti refill registrati</h3>
+              <p>
+                I dati vengono letti dalla collezione `bars`, gia usata dall'app.
+              </p>
+              <div class="table-shell">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Citta</th>
+                      <th>Indirizzo</th>
+                      <th>Featured</th>
+                      <th>Azione</th>
+                    </tr>
+                  </thead>
+                  <tbody id="refill-table-body"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" data-panel="sponsors">
+          <div class="editor-grid">
+            <article class="panel-card form-card">
+              <h3>Modifica sponsor</h3>
+              <form class="admin-form" id="sponsor-edit-form">
+                <input name="id" type="hidden" />
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Nome sponsor</span>
+                    <input name="name" type="text" required />
+                  </label>
+                  <label class="field">
+                    <span>Categoria</span>
+                    <input name="category" type="text" required />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Indirizzo</span>
+                  <input name="address" type="text" required />
+                </label>
+                <label class="field">
+                  <span>Contributo</span>
+                  <input name="contribution" type="text" required />
+                </label>
+                <label class="field">
+                  <span>Messaggio di ringraziamento</span>
+                  <textarea name="thankYouMessage" rows="3" required></textarea>
+                </label>
+                <label class="field">
+                  <span>Supporti separati da virgola</span>
+                  <input name="supports" type="text" />
+                </label>
+                <div class="form-grid two">
+                  <label class="field">
+                    <span>Instagram</span>
+                    <input name="instagram" type="url" />
+                  </label>
+                  <label class="field">
+                    <span>Sito web</span>
+                    <input name="website" type="url" />
+                  </label>
+                </div>
+                <label class="check-field">
+                  <input name="featured" type="checkbox" />
+                  <span>Metti in evidenza</span>
+                </label>
+                <button class="primary-button" type="submit">
+                  Aggiorna sponsor
+                </button>
+              </form>
+            </article>
+
+            <article class="panel-card">
+              <h3>Sponsor registrati</h3>
+              <p>
+                Gli sponsor salvati qui vengono mostrati nella tab Sponsor dell'app.
+              </p>
+              <div class="table-shell">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Categoria</th>
+                      <th>Indirizzo</th>
+                      <th>Featured</th>
+                      <th>Azione</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sponsors-table-body"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" data-panel="roles">
+          <article class="panel-card">
+            <h3>Ruoli e accessi</h3>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ruolo</th>
+                    <th>Permessi principali</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>user</td>
+                    <td>Uso standard dell'app</td>
+                  </tr>
+                  <tr>
+                    <td>refill_manager</td>
+                    <td>Gestione dei punti refill assegnati</td>
+                  </tr>
+                  <tr>
+                    <td>sponsor_manager</td>
+                    <td>Gestione degli sponsor assegnati</td>
+                  </tr>
+                  <tr>
+                    <td>admin</td>
+                    <td>Accesso completo al CRM e ai dati gestionali</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" data-panel="deploy">
+          <article class="panel-card">
+            <h3>Deploy operativo</h3>
+            <ol class="ordered">
+              <li>Usa il CRM per salvare o modificare i contenuti.</li>
+              <li>Pubblica il pannello admin dopo ogni aggiornamento.</li>
+              <li>Pubblica l'app pubblica quando cambi anche Flutter.</li>
+            </ol>
+
+            <div class="code-block">
+              <pre><code>firebase deploy --only hosting:admin --project fairwater-app
+firebase deploy --only hosting:public --project fairwater-app</code></pre>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
