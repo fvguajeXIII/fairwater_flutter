@@ -33,7 +33,9 @@ class RefillNotificationService {
       return;
     }
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       defaultPresentAlert: true,
       defaultPresentBadge: true,
@@ -41,10 +43,7 @@ class RefillNotificationService {
     );
 
     await _plugin.initialize(
-      const InitializationSettings(
-        android: androidSettings,
-        iOS: iosSettings,
-      ),
+      const InitializationSettings(android: androidSettings, iOS: iosSettings),
     );
 
     await _plugin
@@ -78,11 +77,7 @@ class RefillNotificationService {
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
         >()
-        ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
+        ?.requestPermissions(alert: true, badge: true, sound: true);
 
     _permissionsRequested = true;
   }
@@ -119,10 +114,7 @@ class RefillNotificationService {
         }
 
         await _showNotification(bar, distance.round());
-        await prefs.setString(
-          _storageKey(bar.id),
-          now.toIso8601String(),
-        );
+        await prefs.setString(_storageKey(bar.id), now.toIso8601String());
       }
     } finally {
       _checking = false;
@@ -142,7 +134,7 @@ class RefillNotificationService {
   Future<void> _showNotification(BarSpot bar, int distanceMeters) async {
     final title = 'Punto refill vicino';
     final body =
-        '${bar.name} e a circa ${distanceMeters} m da te. Passa per un refill nelle vicinanze.';
+        '${bar.name} e a circa $distanceMeters m da te. Passa per un refill nelle vicinanze.';
 
     const androidDetails = AndroidNotificationDetails(
       _channelId,
@@ -157,10 +149,7 @@ class RefillNotificationService {
       _notificationIdForBar(bar.id),
       title,
       body,
-      const NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      ),
+      const NotificationDetails(android: androidDetails, iOS: iosDetails),
     );
   }
 
