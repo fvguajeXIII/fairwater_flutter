@@ -41,7 +41,6 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.light,
       home: const AuthGate(),
       routes: {
-        '/': (context) => const AuthGate(),
         '/admin-login': (context) => const AdminLoginPage(),
         '/admin-dashboard': (context) => const AdminDashboardPage(),
         '/home': (context) => const HomePage(),
@@ -103,7 +102,8 @@ class AuthGate extends StatelessWidget {
                         savedEmail: '',
                       );
 
-                  if (!preferences.rememberMe || !preferences.biometricEnabled) {
+                  if (!preferences.rememberMe ||
+                      !preferences.biometricEnabled) {
                     return const HomePage();
                   }
 
@@ -209,11 +209,7 @@ class _LoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: WaterBackdrop(
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
-      ),
+      body: WaterBackdrop(child: Center(child: CircularProgressIndicator())),
     );
   }
 }

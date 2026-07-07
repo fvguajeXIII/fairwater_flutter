@@ -101,8 +101,9 @@ class LoginPage extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
                                 'Nuovo su FairWater?',
@@ -420,10 +421,17 @@ class _LoginSheetState extends State<_LoginSheet> {
                     TextFormField(
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: _fieldDeco('Email', Icons.alternate_email_rounded),
+                      decoration: _fieldDeco(
+                        'Email',
+                        Icons.alternate_email_rounded,
+                      ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Inserisci una email';
-                        if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v)) {
+                        if (v == null || v.isEmpty) {
+                          return 'Inserisci una email';
+                        }
+                        if (!RegExp(
+                          r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                        ).hasMatch(v)) {
                           return 'Email non valida';
                         }
                         return null;
@@ -433,8 +441,11 @@ class _LoginSheetState extends State<_LoginSheet> {
                     TextFormField(
                       controller: _passCtrl,
                       obscureText: _obscure,
-                      decoration: _fieldDeco('Password', Icons.lock_outline_rounded)
-                          .copyWith(
+                      decoration:
+                          _fieldDeco(
+                            'Password',
+                            Icons.lock_outline_rounded,
+                          ).copyWith(
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscure
@@ -520,7 +531,9 @@ class _LoginSheetState extends State<_LoginSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
                     'Oppure entra con',
-                    style: TextStyle(color: AppColors.slate.withValues(alpha: 0.9)),
+                    style: TextStyle(
+                      color: AppColors.slate.withValues(alpha: 0.9),
+                    ),
                   ),
                 ),
                 const Expanded(child: Divider()),
@@ -628,10 +641,7 @@ class _PreferenceTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(fontSize: 12),
-                ),
+                Text(subtitle, style: const TextStyle(fontSize: 12)),
               ],
             ),
           ),
@@ -661,9 +671,7 @@ class _SocialBtn extends StatelessWidget {
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
         backgroundColor: dark ? AppColors.ink : Colors.white,
-        side: BorderSide(
-          color: dark ? AppColors.ink : AppColors.border,
-        ),
+        side: BorderSide(color: dark ? AppColors.ink : AppColors.border),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -847,7 +855,8 @@ class _RegisterPageState extends State<RegisterPage> {
                                     'Nome',
                                     Icons.person_outline_rounded,
                                   ),
-                                  validator: (v) => (v == null || v.trim().isEmpty)
+                                  validator: (v) =>
+                                      (v == null || v.trim().isEmpty)
                                       ? 'Obbligatorio'
                                       : null,
                                 ),
@@ -860,7 +869,8 @@ class _RegisterPageState extends State<RegisterPage> {
                                     'Cognome',
                                     Icons.person_outline_rounded,
                                   ),
-                                  validator: (v) => (v == null || v.trim().isEmpty)
+                                  validator: (v) =>
+                                      (v == null || v.trim().isEmpty)
                                       ? 'Obbligatorio'
                                       : null,
                                 ),
@@ -879,8 +889,9 @@ class _RegisterPageState extends State<RegisterPage> {
                               if (v == null || v.isEmpty) {
                                 return 'Inserisci una email';
                               }
-                              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                                  .hasMatch(v)) {
+                              if (!RegExp(
+                                r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                              ).hasMatch(v)) {
                                 return 'Email non valida';
                               }
                               return null;
@@ -890,21 +901,22 @@ class _RegisterPageState extends State<RegisterPage> {
                           TextFormField(
                             controller: _passCtrl,
                             obscureText: _obscure,
-                            decoration: _fieldDeco(
-                              'Password',
-                              Icons.lock_outline_rounded,
-                            ).copyWith(
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscure
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: AppColors.slate,
+                            decoration:
+                                _fieldDeco(
+                                  'Password',
+                                  Icons.lock_outline_rounded,
+                                ).copyWith(
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscure
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: AppColors.slate,
+                                    ),
+                                    onPressed: () =>
+                                        setState(() => _obscure = !_obscure),
+                                  ),
                                 ),
-                                onPressed: () =>
-                                    setState(() => _obscure = !_obscure),
-                              ),
-                            ),
                             validator: (v) {
                               if (v == null || v.isEmpty) {
                                 return 'Inserisci la password';

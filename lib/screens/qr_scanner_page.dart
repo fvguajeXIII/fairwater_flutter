@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
@@ -28,7 +26,7 @@ class _QrScannerPageState extends State<QrScannerPage> {
       return;
     }
 
-    if (Platform.isAndroid) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
       controller.pauseCamera();
     }
     controller.resumeCamera();
@@ -36,7 +34,6 @@ class _QrScannerPageState extends State<QrScannerPage> {
 
   @override
   void dispose() {
-    _controller?.dispose();
     super.dispose();
   }
 
@@ -81,15 +78,17 @@ class _QrScannerPageState extends State<QrScannerPage> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Errore scanner QR: $error'),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Errore scanner QR: $error')));
   }
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return const _QrScannerWebFallback();
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -168,11 +167,107 @@ class _QrScannerPageState extends State<QrScannerPage> {
   }
 }
 
+class _QrScannerWebFallback extends StatefulWidget {
+  const _QrScannerWebFallback();
+
+  @override
+  State<_QrScannerWebFallback> createState() => _QrScannerWebFallbackState();
+}
+
+class _QrScannerWebFallbackState extends State<_QrScannerWebFallback> {
+  final TextEditingController _codeController = TextEditingController();
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  void _submitCode() {
+    final code = _codeController.text.trim();
+    if (code.isEmpty) {
+      return;
+    }
+    Navigator.of(context).pop(code);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: WaterBackdrop(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: AppDecorations.glassCard(radius: 28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppColors.deepOcean,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      const WaterBottleBadge(size: 74),
+                      const SizedBox(height: 18),
+                      const Text(
+                        'Inserisci codice refill',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'La scansione con fotocamera e disponibile sull app mobile. Sul web puoi usare il codice stampato sotto al QR.',
+                        style: TextStyle(
+                          height: 1.45,
+                          color: AppColors.slate.withValues(alpha: 0.92),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      TextField(
+                        controller: _codeController,
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          hintText: 'Codice refill',
+                          prefixIcon: Icon(Icons.qr_code_2_rounded),
+                        ),
+                        onSubmitted: (_) => _submitCode(),
+                      ),
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _submitCode,
+                          icon: const Icon(Icons.check_rounded),
+                          label: const Text('Registra refill'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ScannerTopButton extends StatelessWidget {
-  const _ScannerTopButton({
-    required this.icon,
-    required this.onPressed,
-  });
+  const _ScannerTopButton({required this.icon, required this.onPressed});
 
   final IconData icon;
   final VoidCallback onPressed;

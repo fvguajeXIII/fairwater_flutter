@@ -21,7 +21,7 @@ const Color _kPrimaryDark = AppColors.deepOcean;
 const Color _kSurface = AppColors.foam;
 const double _kNearbyRadiusMeters = 5000;
 const List<SponsorSpot> _kSampleSponsors = [
-  const SponsorSpot(
+  SponsorSpot(
     id: 'emporio-del-corso',
     name: 'Emporio del Corso',
     category: 'Market di quartiere',
@@ -29,14 +29,14 @@ const List<SponsorSpot> _kSampleSponsors = [
     contribution: 'Supporto logistico e materiali per gli eventi.',
     thankYouMessage:
         'Grazie per aver creduto nel progetto fin dal primo momento e per averci aiutato a coinvolgere il quartiere.',
-    supports: const ['Eventi locali', 'Materiali', 'Presenza sul territorio'],
-    socialLinks: const {
+    supports: ['Eventi locali', 'Materiali', 'Presenza sul territorio'],
+    socialLinks: {
       'instagram': 'https://www.instagram.com/emporiodelcorso',
       'facebook': 'https://www.facebook.com/emporiodelcorso',
     },
     featured: true,
   ),
-  const SponsorSpot(
+  SponsorSpot(
     id: 'pasticceria-la-portella',
     name: 'Pasticceria La Portella',
     category: 'Pasticceria artigianale',
@@ -44,14 +44,14 @@ const List<SponsorSpot> _kSampleSponsors = [
     contribution: 'Accoglienza durante presentazioni e giornate divulgative.',
     thankYouMessage:
         'Il vostro contributo ha reso gli incontri con la comunita piu calorosi, accessibili e partecipati.',
-    supports: const ['Accoglienza', 'Degustazioni', 'Eventi'],
-    socialLinks: const {
+    supports: ['Accoglienza', 'Degustazioni', 'Eventi'],
+    socialLinks: {
       'instagram': 'https://www.instagram.com/pasticcerialaportella',
       'website': 'https://www.pasticcerialaportella.it',
     },
     featured: false,
   ),
-  const SponsorSpot(
+  SponsorSpot(
     id: 'cartolibreria-aurora',
     name: 'Cartolibreria Aurora',
     category: 'Cartoleria e libreria',
@@ -59,14 +59,14 @@ const List<SponsorSpot> _kSampleSponsors = [
     contribution: 'Stampa di materiali informativi e supporti promozionali.',
     thankYouMessage:
         'Grazie per averci aiutato a raccontare il progetto con materiali chiari, curati e sempre disponibili.',
-    supports: const ['Volantini', 'Locandine', 'Comunicazione'],
-    socialLinks: const {
+    supports: ['Volantini', 'Locandine', 'Comunicazione'],
+    socialLinks: {
       'facebook': 'https://www.facebook.com/cartolibreriaaurora',
       'instagram': 'https://www.instagram.com/cartolibreriaaurora',
     },
     featured: false,
   ),
-  const SponsorSpot(
+  SponsorSpot(
     id: 'officina-verde',
     name: 'Officina Verde',
     category: 'Mobilita sostenibile',
@@ -74,14 +74,14 @@ const List<SponsorSpot> _kSampleSponsors = [
     contribution: 'Supporto tecnico per iniziative legate a mobilita e territorio.',
     thankYouMessage:
         'La vostra sensibilita verso il territorio ha dato forza concreta alla visione del progetto.',
-    supports: const ['Territorio', 'Tecnica', 'Sostenibilita'],
-    socialLinks: const {
+    supports: ['Territorio', 'Tecnica', 'Sostenibilita'],
+    socialLinks: {
       'instagram': 'https://www.instagram.com/officinaverdefondi',
       'website': 'https://www.officinaverdefondi.it',
     },
     featured: false,
   ),
-  const SponsorSpot(
+  SponsorSpot(
     id: 'erboristeria-san-magno',
     name: 'Erboristeria San Magno',
     category: 'Benessere e prodotti naturali',
@@ -89,8 +89,8 @@ const List<SponsorSpot> _kSampleSponsors = [
     contribution: 'Sostegno economico e visibilita alle attivita di lancio.',
     thankYouMessage:
         'Grazie per il sostegno ricevuto: il vostro aiuto ha contribuito davvero alla realizzazione del progetto.',
-    supports: const ['Sponsorizzazione', 'Benessere', 'Community'],
-    socialLinks: const {
+    supports: ['Sponsorizzazione', 'Benessere', 'Community'],
+    socialLinks: {
       'instagram': 'https://www.instagram.com/erboristeriasanmagno',
       'facebook': 'https://www.facebook.com/erboristeriasanmagno',
     },
