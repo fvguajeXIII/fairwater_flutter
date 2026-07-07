@@ -1,9 +1,13 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'firebase_options.dart';
+import 'screens/admin_dashboard_page.dart';
+import 'screens/admin_login_page.dart';
 import 'screens/home_page.dart';
 import 'screens/login_page.dart';
+import 'services/admin_service.dart';
 import 'services/auth_service.dart';
 import 'services/biometric_auth_service.dart';
 import 'services/login_preferences_service.dart';
@@ -13,7 +17,10 @@ import 'theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    await RefillNotificationService.instance.initialize();
+    // Inizializza notifiche solo su mobile/desktop, non su web
+    if (!kIsWeb) {
+      await RefillNotificationService.instance.initialize();
+    }
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
@@ -33,6 +40,13 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       home: const AuthGate(),
+      routes: {
+        '/': (context) => const AuthGate(),
+        '/admin-login': (context) => const AdminLoginPage(),
+        '/admin-dashboard': (context) => const AdminDashboardPage(),
+        '/home': (context) => const HomePage(),
+        '/login': (context) => const LoginPage(),
+      },
     );
   }
 }
@@ -45,6 +59,7 @@ class AuthGate extends StatelessWidget {
     final authService = AuthService();
     final loginPreferencesService = LoginPreferencesService();
     final biometricAuthService = BiometricAuthService();
+    final adminService = AdminService();
 
     return StreamBuilder(
       stream: authService.authStateChanges(),
@@ -58,28 +73,44 @@ class AuthGate extends StatelessWidget {
         }
 
         if (snapshot.data != null) {
-          return FutureBuilder(
-            future: loginPreferencesService.load(),
-            builder: (context, preferencesSnapshot) {
-              if (preferencesSnapshot.connectionState ==
-                  ConnectionState.waiting) {
+          // Verifica se l'utente è un admin
+          return FutureBuilder<bool>(
+            future: adminService.isUserAdmin(),
+            builder: (context, adminSnapshot) {
+              if (adminSnapshot.connectionState == ConnectionState.waiting) {
                 return const _LoadingScreen();
               }
 
-              final preferences =
-                  preferencesSnapshot.data ??
-                  const LoginPreferences(
-                    rememberMe: false,
-                    biometricEnabled: false,
-                    savedEmail: '',
-                  );
-
-              if (!preferences.rememberMe || !preferences.biometricEnabled) {
-                return const HomePage();
+              // Se è admin, vai alla dashboard admin
+              if (adminSnapshot.data == true) {
+                return const AdminDashboardPage();
               }
 
-              return _BiometricGate(
-                biometricAuthService: biometricAuthService,
+              // Altrimenti carica le preferenze per il login biometrico
+              return FutureBuilder(
+                future: loginPreferencesService.load(),
+                builder: (context, preferencesSnapshot) {
+                  if (preferencesSnapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const _LoadingScreen();
+                  }
+
+                  final preferences =
+                      preferencesSnapshot.data ??
+                      const LoginPreferences(
+                        rememberMe: false,
+                        biometricEnabled: false,
+                        savedEmail: '',
+                      );
+
+                  if (!preferences.rememberMe || !preferences.biometricEnabled) {
+                    return const HomePage();
+                  }
+
+                  return _BiometricGate(
+                    biometricAuthService: biometricAuthService,
+                  );
+                },
               );
             },
           );
