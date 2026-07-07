@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
+import '../services/refill_notification_service.dart';
 import '../theme/app_theme.dart';
 
 const Color _kProfilePrimary = AppColors.ocean;
@@ -192,6 +193,7 @@ class ProfilePage extends StatelessWidget {
 
   Future<void> _signOut(BuildContext context) async {
     try {
+      await RefillNotificationService.instance.stopBackgroundMonitoring();
       await _authService.signOut();
     } catch (_) {
       if (!context.mounted) {

@@ -9,6 +9,12 @@ class AppColors {
   static const Color ink = Color(0xFF123847);
   static const Color slate = Color(0xFF5F7C88);
   static const Color success = Color(0xFF1D9A67);
+  static const Color border = Color(0xFFD7EAF1);
+  static const Color borderStrong = Color(0xFFBFDCE6);
+  static const Color iconMuted = Color(0xFF7E9AA5);
+  static const Color line = Color(0xFFE4F0F4);
+  static const Color surfaceAlt = Color(0xFFEAFBFF);
+  static const Color surfaceMuted = Color(0xFFF0F8FB);
 }
 
 class AppTheme {

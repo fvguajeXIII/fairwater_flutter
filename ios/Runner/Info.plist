@@ -37,6 +37,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>FairWater usa la tua posizione anche in background per avvisarti quando ti avvicini a un punto refill affiliato.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>FairWater usa la tua posizione anche in background per avvisarti quando ti avvicini a un punto refill affiliato.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>FairWater usa la tua posizione per mostrarti i refill e i bar piu vicini.</string>
 	<key>NSUserNotificationUsageDescription</key>
@@ -68,6 +72,10 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

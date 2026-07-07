@@ -23,7 +23,16 @@ class LoginPage extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       enableDrag: true,
-      builder: (_) => const _LoginSheet(),
+      builder: (context) => Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width > 600
+                ? 560
+                : MediaQuery.of(context).size.width,
+          ),
+          child: const _LoginSheet(),
+        ),
+      ),
     );
   }
 
@@ -553,10 +562,15 @@ class _LoginSheetState extends State<_LoginSheet> {
             Center(
               child: TextButton(
                 onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const RegisterPage()),
-                  );
+                  final navigator = Navigator.of(context);
+                  if (navigator.canPop()) {
+                    navigator.pop();
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const RegisterPage()),
+                      );
+                    });
+                  }
                 },
                 child: const Text('Non hai ancora un account? Registrati'),
               ),

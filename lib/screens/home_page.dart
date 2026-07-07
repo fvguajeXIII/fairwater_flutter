@@ -121,21 +121,17 @@ class _HomePageState extends State<HomePage> {
   bool _mapReady = false;
   LatLng? _pendingMapCenter;
   bool _seedingBars = false;
-  StreamSubscription<List<BarSpot>>? _barsSubscription;
   StreamSubscription<Position>? _positionSubscription;
-  List<BarSpot> _latestBars = const <BarSpot>[];
 
   @override
   void initState() {
     super.initState();
     _seedBarsIfNeeded();
-    _listenBarsForNotifications();
     _loadLocation();
   }
 
   @override
   void dispose() {
-    _barsSubscription?.cancel();
     _positionSubscription?.cancel();
     super.dispose();
   }
@@ -190,9 +186,7 @@ class _HomePageState extends State<HomePage> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      _position = current;
-      await _refillNotificationService.requestPermissions();
-      await _refillNotificationService.checkNearbyRefills(current);
+      unawaited(_refillNotificationService.startBackgroundMonitoring());
       _startPositionMonitoring();
 
       if (!mounted) return;
@@ -215,18 +209,6 @@ class _HomePageState extends State<HomePage> {
         _loadingLocation = false;
       });
     }
-  }
-
-  void _listenBarsForNotifications() {
-    _barsSubscription = _barService.watchBars().listen((bars) async {
-      _latestBars = bars;
-      _refillNotificationService.updateBars(bars);
-
-      final currentPosition = _position;
-      if (currentPosition != null) {
-        await _refillNotificationService.checkNearbyRefills(currentPosition);
-      }
-    });
   }
 
   void _startPositionMonitoring() {
@@ -254,10 +236,6 @@ class _HomePageState extends State<HomePage> {
           });
 
           _queueMapMove(LatLng(position.latitude, position.longitude));
-
-          if (_latestBars.isNotEmpty) {
-            await _refillNotificationService.checkNearbyRefills(position);
-          }
         });
   }
 

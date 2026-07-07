@@ -44,11 +44,16 @@ class AuthService {
   Future<UserCredential> signInWithEmailAndPassword({
     required String email,
     required String password,
-  }) {
-    return _auth.signInWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
+  }) async {
+    final credential = await _auth
+        .signInWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        )
+        .timeout(_requestTimeout);
+
+    await _ensureUserProfile(credential.user, provider: 'password');
+    return credential;
   }
 
   Future<UserCredential> registerWithProfile({
@@ -91,6 +96,11 @@ class AuthService {
           'referralCode': referralCode?.trim() ?? '',
           'photoUrl': '',
           'provider': 'password',
+          'roles': ['user'],
+          'accountType': 'user',
+          'status': 'active',
+          'managedRefillPointIds': [],
+          'managedSponsorIds': [],
           'refillCount': 0,
           'bottleOwnerSince': FieldValue.serverTimestamp(),
           'createdAt': FieldValue.serverTimestamp(),
@@ -111,7 +121,7 @@ class AuthService {
       _logGoogleSignIn(
         'Login web completato. UID=${credential.user?.uid}, email=${credential.user?.email}',
       );
-      await _ensureUserProfile(credential.user);
+      await _ensureUserProfile(credential.user, provider: 'google');
       return credential;
     }
 
@@ -165,7 +175,7 @@ class AuthService {
       _logGoogleSignIn(
         'Login Firebase completato. UID=${userCredential.user?.uid}, email=${userCredential.user?.email}',
       );
-      await _ensureUserProfile(userCredential.user);
+      await _ensureUserProfile(userCredential.user, provider: 'google');
       return userCredential;
     } on FirebaseAuthException catch (e, st) {
       _logGoogleSignIn(
@@ -201,7 +211,7 @@ class AuthService {
     await _auth.signOut();
   }
 
-  Future<void> _ensureUserProfile(User? user) async {
+  Future<void> _ensureUserProfile(User? user, {required String provider}) async {
     if (user == null) {
       return;
     }
@@ -214,6 +224,7 @@ class AuthService {
         'email': user.email ?? '',
         'displayName': user.displayName ?? '',
         'photoUrl': user.photoURL ?? '',
+        'provider': provider,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true)).timeout(_requestTimeout);
       return;
@@ -236,7 +247,12 @@ class AuthService {
       'phone': user.phoneNumber ?? '',
       'referralCode': '',
       'photoUrl': user.photoURL ?? '',
-      'provider': 'google',
+      'provider': provider,
+      'roles': ['user'],
+      'accountType': 'user',
+      'status': 'active',
+      'managedRefillPointIds': [],
+      'managedSponsorIds': [],
       'refillCount': 0,
       'bottleOwnerSince': FieldValue.serverTimestamp(),
       'createdAt': FieldValue.serverTimestamp(),

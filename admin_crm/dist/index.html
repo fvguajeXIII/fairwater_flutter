@@ -10,7 +10,7 @@
     />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
+  <body class="crm-login-open">
     <div class="login-shell" id="login-shell">
       <div class="login-panel">
         <div class="login-brand">
@@ -24,8 +24,8 @@
         <div class="login-copy">
           <h2>Accedi al pannello amministrativo</h2>
           <p>
-            Inserisci le credenziali temporanee per gestire utenti, sponsor e
-            punti refill.
+            Inserisci le credenziali CRM per gestire sponsor e punti refill
+            collegati all'app.
           </p>
         </div>
 
@@ -86,7 +86,7 @@
           <p class="sidebar-title">Stato integrazione</p>
           <ul class="status-list">
             <li>Login CRM attivo</li>
-            <li>FireStore collegato in realtime</li>
+            <li>Firestore collegato in realtime</li>
             <li>CRUD refill pronto</li>
             <li>CRUD sponsor pronto</li>
           </ul>
@@ -116,7 +116,7 @@
               <p class="hero-copy">
                 Refill e sponsor vengono salvati su Firestore e compaiono
                 nell'app. I profili utente vengono gestiti nella collezione
-                `users`.
+                users.
               </p>
             </div>
             <div class="hero-note">
@@ -345,6 +345,44 @@
         </section>
 
         <section class="view" data-panel="users">
+          <article class="panel-card form-card user-auth-card">
+            <h3>Sblocca utenti registrati</h3>
+            <p>
+              Per proteggere i profili, la lista utenti richiede un account
+              Firebase con ruolo admin nel documento users/{uid}.
+            </p>
+            <button
+              class="google-auth-button"
+              id="user-admin-google-button"
+              type="button"
+            >
+              Accedi con Google Firebase
+            </button>
+            <form class="admin-form compact-auth-form" id="user-admin-auth-form">
+              <div class="form-grid two">
+                <label class="field">
+                  <span>Email Firebase admin</span>
+                  <input name="adminEmail" type="email" autocomplete="email" required />
+                </label>
+                <label class="field">
+                  <span>Password</span>
+                  <input
+                    name="adminPassword"
+                    type="password"
+                    autocomplete="current-password"
+                    required
+                  />
+                </label>
+              </div>
+              <button class="primary-button" type="submit">
+                Sblocca lista utenti
+              </button>
+              <p class="inline-status" id="user-admin-auth-status">
+                Accesso utenti non ancora sbloccato.
+              </p>
+            </form>
+          </article>
+
           <article class="panel-card">
             <h3>Utenti registrati</h3>
             <p>
@@ -582,6 +620,6 @@ firebase deploy --only hosting:public --project fairwater-app</code></pre>
       </main>
     </div>
 
-    <script type="module" src="/app.js"></script>
+    <script type="module" src="/app.js?v=20260707-usuarios-popup"></script>
   </body>
 </html>
