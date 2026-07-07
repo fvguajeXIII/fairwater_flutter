@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import '../services/admin_service.dart';
@@ -1010,6 +1014,8 @@ class _BarFormDialog extends StatefulWidget {
 }
 
 class _BarFormDialogState extends State<_BarFormDialog> {
+  static const Duration _addressSearchDelay = Duration(milliseconds: 450);
+
   late TextEditingController nameController;
   late TextEditingController addressController;
   late TextEditingController cityController;
@@ -1021,6 +1027,11 @@ class _BarFormDialogState extends State<_BarFormDialog> {
 
   late List<String> services;
   bool featured = false;
+  Timer? _addressSearchDebounce;
+  bool _isSearchingAddress = false;
+  String? _addressSearchError;
+  List<_AddressSearchResult> _addressResults = [];
+  _AddressSearchResult? _selectedAddressResult;
 
   @override
   void initState() {
@@ -1029,6 +1040,7 @@ class _BarFormDialogState extends State<_BarFormDialog> {
 
     nameController = TextEditingController(text: bar?.name ?? '');
     addressController = TextEditingController(text: bar?.address ?? '');
+    addressController.addListener(_onAddressChanged);
     cityController = TextEditingController(text: bar?.city ?? '');
     latitudeController =
         TextEditingController(text: bar?.location.latitude.toString() ?? '');
@@ -1046,6 +1058,7 @@ class _BarFormDialogState extends State<_BarFormDialog> {
 
   @override
   void dispose() {
+    _addressSearchDebounce?.cancel();
     nameController.dispose();
     addressController.dispose();
     cityController.dispose();
@@ -1070,13 +1083,15 @@ class _BarFormDialogState extends State<_BarFormDialog> {
             if (!isEditing)
               _buildTextField(idController, 'ID Locale', 'Es: caffe-duomo'),
             _buildTextField(nameController, 'Nome', 'Es: Caffè del Duomo'),
-            _buildTextField(addressController, 'Indirizzo',
-                'Es: Piazza Municipio 18'),
-            _buildTextField(cityController, 'Città', 'Es: Terracina'),
+            _buildAddressSearchField(),
+            _buildTextField(cityController, 'Città', 'Es: Terracina',
+                readOnly: true),
             _buildTextField(
-                latitudeController, 'Latitudine', 'Es: 41.2916360'),
+                latitudeController, 'Latitudine', 'Es: 41.2916360',
+                readOnly: true),
             _buildTextField(
-                longitudeController, 'Longitudine', 'Es: 13.2485294'),
+                longitudeController, 'Longitudine', 'Es: 13.2485294',
+                readOnly: true),
             _buildTextField(refillInfoController, 'Info Refill',
                 'Es: Refill verificato'),
             _buildTextField(
@@ -1109,12 +1124,14 @@ class _BarFormDialogState extends State<_BarFormDialog> {
   Widget _buildTextField(
     TextEditingController controller,
     String label,
-    String hint,
-  ) {
+    String hint, {
+      bool readOnly = false,
+    }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
         controller: controller,
+        readOnly: readOnly,
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
@@ -1123,6 +1140,239 @@ class _BarFormDialogState extends State<_BarFormDialog> {
         ),
       ),
     );
+  }
+
+  Widget _buildAddressSearchField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: addressController,
+            decoration: InputDecoration(
+              labelText: 'Indirizzo',
+              hintText: 'Es: Via Roma 15 Fondi',
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.all(12),
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _isSearchingAddress
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : _selectedAddressResult != null
+                      ? const Icon(Icons.check_circle, color: AppColors.ocean)
+                      : IconButton(
+                          tooltip: 'Cerca indirizzo',
+                          icon: const Icon(Icons.search),
+                          onPressed: _runAddressSearchNow,
+                        ),
+            ),
+            onSubmitted: (_) => _runAddressSearchNow(),
+          ),
+          if (_addressSearchError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                _addressSearchError!,
+                style: const TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
+          if (_addressResults.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _addressResults.length,
+                separatorBuilder: (_, __) => Divider(
+                  height: 1,
+                  color: Colors.grey.shade300,
+                ),
+                itemBuilder: (context, index) {
+                  final result = _addressResults[index];
+                  return ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.place, color: AppColors.ocean),
+                    title: Text(result.label),
+                    subtitle: Text(
+                      '${result.latitude.toStringAsFixed(6)}, '
+                      '${result.longitude.toStringAsFixed(6)}',
+                    ),
+                    onTap: () => _selectAddressResult(result),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _onAddressChanged() {
+    final query = addressController.text.trim();
+
+    if (_selectedAddressResult?.label == query) {
+      return;
+    }
+
+    _selectedAddressResult = null;
+    cityController.clear();
+    latitudeController.clear();
+    longitudeController.clear();
+
+    _addressSearchDebounce?.cancel();
+    if (query.length < 4) {
+      if (mounted) {
+        setState(() {
+          _addressResults = [];
+          _addressSearchError = null;
+          _isSearchingAddress = false;
+        });
+      }
+      return;
+    }
+
+    _addressSearchDebounce =
+        Timer(_addressSearchDelay, () => _searchAddress(query));
+  }
+
+  Future<void> _searchAddress(String query) async {
+    if (!mounted) return;
+
+    setState(() {
+      _isSearchingAddress = true;
+      _addressSearchError = null;
+    });
+
+    try {
+      var results = <_AddressSearchResult>[];
+      try {
+        results = await _searchAddressWithNominatim(query);
+      } catch (_) {
+        results = [];
+      }
+      if (results.isEmpty) {
+        results = await _searchAddressWithPhoton(query);
+      }
+
+      if (!mounted || addressController.text.trim() != query) return;
+
+      setState(() {
+        _addressResults = results;
+        _addressSearchError =
+            results.isEmpty ? 'Nessun indirizzo trovato.' : null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _addressResults = [];
+        _addressSearchError = 'Impossibile cercare l indirizzo ora.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isSearchingAddress = false);
+      }
+    }
+  }
+
+  void _runAddressSearchNow() {
+    final query = addressController.text.trim();
+    _addressSearchDebounce?.cancel();
+
+    if (query.length < 4) {
+      setState(() {
+        _addressResults = [];
+        _addressSearchError = 'Inserisci almeno 4 caratteri.';
+      });
+      return;
+    }
+
+    _searchAddress(query);
+  }
+
+  Future<List<_AddressSearchResult>> _searchAddressWithNominatim(
+    String query,
+  ) async {
+    final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
+      'q': query,
+      'format': 'jsonv2',
+      'addressdetails': '1',
+      'limit': '5',
+      'countrycodes': 'it',
+      'accept-language': 'it',
+    });
+
+    final response = await http.get(uri, headers: {
+      'Accept': 'application/json',
+      'Accept-Language': 'it',
+      'User-Agent': 'FairWaterCRM/1.0 (admin address search)',
+    });
+
+    if (response.statusCode != 200) {
+      throw Exception('ricerca indirizzo non disponibile');
+    }
+
+    final decoded = jsonDecode(response.body) as List<dynamic>;
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(_AddressSearchResult.fromNominatim)
+        .whereType<_AddressSearchResult>()
+        .toList();
+  }
+
+  Future<List<_AddressSearchResult>> _searchAddressWithPhoton(
+    String query,
+  ) async {
+    final uri = Uri.https('photon.komoot.io', '/api/', {
+      'q': query,
+      'limit': '5',
+      'lang': 'it',
+    });
+
+    final response = await http.get(uri, headers: {
+      'Accept': 'application/json',
+      'Accept-Language': 'it',
+    });
+
+    if (response.statusCode != 200) {
+      throw Exception('ricerca indirizzo non disponibile');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final features = decoded['features'] as List<dynamic>? ?? [];
+    return features
+        .whereType<Map<String, dynamic>>()
+        .map(_AddressSearchResult.fromPhoton)
+        .whereType<_AddressSearchResult>()
+        .toList();
+  }
+
+  void _selectAddressResult(_AddressSearchResult result) {
+    _addressSearchDebounce?.cancel();
+    addressController
+      ..removeListener(_onAddressChanged)
+      ..text = result.label
+      ..selection = TextSelection.collapsed(offset: result.label.length)
+      ..addListener(_onAddressChanged);
+
+    setState(() {
+      _selectedAddressResult = result;
+      _addressResults = [];
+      _addressSearchError = null;
+      cityController.text = result.city;
+      latitudeController.text = result.latitude.toStringAsFixed(7);
+      longitudeController.text = result.longitude.toStringAsFixed(7);
+    });
   }
 
   void _saveBar() {
@@ -1134,13 +1384,20 @@ class _BarFormDialogState extends State<_BarFormDialog> {
         throw Exception('ID locale è obbligatorio');
       }
 
+      final address = addressController.text.trim();
+      final isExistingAddress =
+          widget.initialBar != null && widget.initialBar?.address == address;
+      if (_selectedAddressResult == null && !isExistingAddress) {
+        throw Exception('seleziona un indirizzo dai risultati di ricerca');
+      }
+
       final lat = double.parse(latitudeController.text);
       final lng = double.parse(longitudeController.text);
 
       final bar = BarSpot(
         id: id,
         name: nameController.text.trim(),
-        address: addressController.text.trim(),
+        address: address,
         city: cityController.text.trim(),
         location: LatLng(lat, lng),
         refillInfo: refillInfoController.text.trim(),
@@ -1157,6 +1414,114 @@ class _BarFormDialogState extends State<_BarFormDialog> {
         SnackBar(content: Text('Errore: $e')),
       );
     }
+  }
+}
+
+class _AddressSearchResult {
+  final String label;
+  final String city;
+  final double latitude;
+  final double longitude;
+
+  const _AddressSearchResult({
+    required this.label,
+    required this.city,
+    required this.latitude,
+    required this.longitude,
+  });
+
+  static _AddressSearchResult? fromNominatim(Map<String, dynamic> json) {
+    final label = (json['display_name'] as String? ?? '').trim();
+    final latitude = double.tryParse(json['lat'] as String? ?? '');
+    final longitude = double.tryParse(json['lon'] as String? ?? '');
+    final address = json['address'] as Map<String, dynamic>? ?? {};
+    final city = _firstAddressValue(address, const [
+      'city',
+      'town',
+      'village',
+      'municipality',
+      'county',
+    ]);
+
+    if (label.isEmpty || latitude == null || longitude == null) {
+      return null;
+    }
+
+    return _AddressSearchResult(
+      label: label,
+      city: city,
+      latitude: latitude,
+      longitude: longitude,
+    );
+  }
+
+  static _AddressSearchResult? fromPhoton(Map<String, dynamic> json) {
+    final geometry = json['geometry'] as Map<String, dynamic>? ?? {};
+    final properties = json['properties'] as Map<String, dynamic>? ?? {};
+    final coordinates = geometry['coordinates'] as List<dynamic>? ?? [];
+
+    if (coordinates.length < 2) {
+      return null;
+    }
+
+    final longitude = (coordinates[0] as num?)?.toDouble();
+    final latitude = (coordinates[1] as num?)?.toDouble();
+    final city = _firstAddressValue(properties, const [
+      'city',
+      'town',
+      'village',
+      'municipality',
+      'county',
+      'state',
+    ]);
+    final label = _buildPhotonLabel(properties, city);
+
+    if (label.isEmpty || latitude == null || longitude == null) {
+      return null;
+    }
+
+    return _AddressSearchResult(
+      label: label,
+      city: city,
+      latitude: latitude,
+      longitude: longitude,
+    );
+  }
+
+  static String _buildPhotonLabel(
+    Map<String, dynamic> properties,
+    String city,
+  ) {
+    final name = (properties['name'] as String? ?? '').trim();
+    final street = (properties['street'] as String? ?? '').trim();
+    final houseNumber = (properties['housenumber'] as String? ?? '').trim();
+    final postcode = (properties['postcode'] as String? ?? '').trim();
+    final country = (properties['country'] as String? ?? '').trim();
+    final streetLine = [
+      if (street.isNotEmpty) street,
+      if (houseNumber.isNotEmpty) houseNumber,
+    ].join(' ');
+    final parts = [
+      if (streetLine.isNotEmpty) streetLine else if (name.isNotEmpty) name,
+      if (postcode.isNotEmpty) postcode,
+      if (city.isNotEmpty) city,
+      if (country.isNotEmpty) country,
+    ];
+
+    return parts.join(', ');
+  }
+
+  static String _firstAddressValue(
+    Map<String, dynamic> address,
+    List<String> keys,
+  ) {
+    for (final key in keys) {
+      final value = (address[key] as String? ?? '').trim();
+      if (value.isNotEmpty) {
+        return value;
+      }
+    }
+    return '';
   }
 }
 

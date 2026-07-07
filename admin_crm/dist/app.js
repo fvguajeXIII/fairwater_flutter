@@ -354,6 +354,275 @@ function safeText(value) {
   return String(value ?? "").trim();
 }
 
+function setAddressResults(container, content) {
+  if (!container) {
+    return;
+  }
+
+  container.replaceChildren(...content);
+  container.classList.toggle("is-visible", content.length > 0);
+}
+
+function addressMessage(message) {
+  const node = document.createElement("div");
+  node.className = "address-result-message";
+  node.textContent = message;
+  return node;
+}
+
+function firstAddressValue(source, keys) {
+  for (const key of keys) {
+    const value = safeText(source?.[key]);
+    if (value) {
+      return value;
+    }
+  }
+  return "";
+}
+
+function buildPhotonLabel(properties, city) {
+  const name = safeText(properties.name);
+  const street = safeText(properties.street);
+  const houseNumber = safeText(properties.housenumber);
+  const postcode = safeText(properties.postcode);
+  const country = safeText(properties.country);
+  const streetLine = [street, houseNumber].filter(Boolean).join(" ");
+  return [
+    streetLine || name,
+    postcode,
+    city,
+    country,
+  ].filter(Boolean).join(", ");
+}
+
+function parseNominatimAddress(item) {
+  const latitude = Number(item.lat);
+  const longitude = Number(item.lon);
+  const address = item.address ?? {};
+  const label = safeText(item.display_name);
+  const city = firstAddressValue(address, [
+    "city",
+    "town",
+    "village",
+    "municipality",
+    "county",
+  ]);
+
+  if (!label || Number.isNaN(latitude) || Number.isNaN(longitude)) {
+    return null;
+  }
+
+  return { label, city, latitude, longitude };
+}
+
+function parsePhotonAddress(feature) {
+  const properties = feature.properties ?? {};
+  const coordinates = feature.geometry?.coordinates ?? [];
+  const longitude = Number(coordinates[0]);
+  const latitude = Number(coordinates[1]);
+  const city = firstAddressValue(properties, [
+    "city",
+    "town",
+    "village",
+    "municipality",
+    "county",
+    "state",
+  ]);
+  const label = buildPhotonLabel(properties, city);
+
+  if (!label || Number.isNaN(latitude) || Number.isNaN(longitude)) {
+    return null;
+  }
+
+  return { label, city, latitude, longitude };
+}
+
+async function searchAddressWithNominatim(query) {
+  const params = new URLSearchParams({
+    q: query,
+    format: "jsonv2",
+    addressdetails: "1",
+    limit: "5",
+    countrycodes: "it",
+    "accept-language": "it",
+  });
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+    {
+      headers: {
+        Accept: "application/json",
+        "Accept-Language": "it",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Nominatim non disponibile");
+  }
+
+  const data = await response.json();
+  return data.map(parseNominatimAddress).filter(Boolean);
+}
+
+async function searchAddressWithPhoton(query) {
+  const params = new URLSearchParams({
+    q: query,
+    limit: "5",
+    lang: "it",
+  });
+  const response = await fetch(
+    `https://photon.komoot.io/api/?${params.toString()}`,
+    {
+      headers: {
+        Accept: "application/json",
+        "Accept-Language": "it",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Photon non disponibile");
+  }
+
+  const data = await response.json();
+  return (data.features ?? []).map(parsePhotonAddress).filter(Boolean);
+}
+
+async function searchAddress(query) {
+  let results = [];
+
+  try {
+    results = await searchAddressWithNominatim(query);
+  } catch (error) {
+    console.info("[FairWater CRM] Nominatim non disponibile, provo Photon.");
+  }
+
+  if (results.length === 0) {
+    results = await searchAddressWithPhoton(query);
+  }
+
+  return results;
+}
+
+function applyAddressResult(form, result) {
+  form.elements.address.value = result.label;
+  form.elements.city.value = result.city;
+  form.elements.latitude.value = result.latitude.toFixed(7);
+  form.elements.longitude.value = result.longitude.toFixed(7);
+  form.dataset.selectedAddress = result.label;
+}
+
+function setupAddressLookup(form) {
+  if (!form?.elements.address) {
+    return;
+  }
+
+  const addressInput = form.elements.address;
+  const searchButton = form.querySelector(".address-search-button");
+  const resultsContainer = form.querySelector("[data-address-results]");
+  let debounce = null;
+  let lastQuery = "";
+
+  const clearCoordinates = () => {
+    if (form.dataset.selectedAddress !== addressInput.value.trim()) {
+      delete form.dataset.selectedAddress;
+      form.elements.latitude.value = "";
+      form.elements.longitude.value = "";
+    }
+  };
+
+  const runSearch = async () => {
+    const query = addressInput.value.trim();
+    window.clearTimeout(debounce);
+
+    if (query.length < 4) {
+      setAddressResults(resultsContainer, [
+        addressMessage("Inserisci almeno 4 caratteri."),
+      ]);
+      return;
+    }
+
+    lastQuery = query;
+    searchButton.disabled = true;
+    setAddressResults(resultsContainer, [addressMessage("Ricerca in corso...")]);
+
+    try {
+      const results = await searchAddress(query);
+      if (lastQuery !== query) {
+        return;
+      }
+
+      if (results.length === 0) {
+        setAddressResults(resultsContainer, [
+          addressMessage("Nessun indirizzo trovato."),
+        ]);
+        return;
+      }
+
+      const buttons = results.map((result) => {
+        const button = document.createElement("button");
+        const title = document.createElement("span");
+        const meta = document.createElement("span");
+
+        button.type = "button";
+        button.className = "address-result-button";
+        title.className = "address-result-title";
+        meta.className = "address-result-meta";
+        title.textContent = result.label;
+        meta.textContent = `${result.latitude.toFixed(6)}, ${result.longitude.toFixed(6)}`;
+        button.append(title, meta);
+        button.addEventListener("click", () => {
+          applyAddressResult(form, result);
+          setAddressResults(resultsContainer, []);
+        });
+        return button;
+      });
+
+      setAddressResults(resultsContainer, buttons);
+    } catch (error) {
+      setAddressResults(resultsContainer, [
+        addressMessage("Impossibile cercare l'indirizzo ora."),
+      ]);
+    } finally {
+      searchButton.disabled = false;
+    }
+  };
+
+  addressInput.addEventListener("input", () => {
+    clearCoordinates();
+    window.clearTimeout(debounce);
+    debounce = window.setTimeout(runSearch, 450);
+  });
+  addressInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      runSearch();
+    }
+  });
+  searchButton?.addEventListener("click", runSearch);
+  form.addEventListener("reset", () => {
+    window.setTimeout(() => {
+      delete form.dataset.selectedAddress;
+      setAddressResults(resultsContainer, []);
+    });
+  });
+}
+
+function assertAddressSelected(form) {
+  const address = safeText(form.elements.address.value);
+  const latitude = Number(form.elements.latitude.value);
+  const longitude = Number(form.elements.longitude.value);
+
+  if (
+    !address ||
+    form.dataset.selectedAddress !== address ||
+    Number.isNaN(latitude) ||
+    Number.isNaN(longitude)
+  ) {
+    throw new Error("Seleziona un indirizzo dalla lista dei risultati.");
+  }
+}
+
 function renderEmptyRow(colspan, message) {
   return `<tr><td colspan="${colspan}" class="table-empty">${message}</td></tr>`;
 }
@@ -546,6 +815,7 @@ function fillRefillEditForm(bar) {
     bar.socialLinks?.facebook ?? bar.socialLinks?.website ?? ""
   );
   refillEditForm.elements.featured.checked = bar.featured === true;
+  refillEditForm.dataset.selectedAddress = safeText(bar.address);
   setView("refill");
   refillEditForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -634,6 +904,8 @@ async function handleRefillCreate(event) {
   const seed = name.toLowerCase().replace(/[^a-z0-9]+/gi, "-");
 
   try {
+    assertAddressSelected(form);
+
     await addDoc(collection(db, "bars"), {
       name,
       city: safeText(formData.get("city")),
@@ -701,6 +973,8 @@ async function handleRefillUpdate(event) {
   }
 
   try {
+    assertAddressSelected(form);
+
     await updateDoc(doc(db, "bars", id), {
       name: safeText(formData.get("name")),
       city: safeText(formData.get("city")),
@@ -1082,6 +1356,7 @@ if (dashboardUserForm) {
 }
 
 if (dashboardRefillForm) {
+  setupAddressLookup(dashboardRefillForm);
   dashboardRefillForm.addEventListener("submit", handleRefillCreate);
 }
 
@@ -1090,6 +1365,7 @@ if (dashboardSponsorForm) {
 }
 
 if (refillEditForm) {
+  setupAddressLookup(refillEditForm);
   refillEditForm.addEventListener("submit", handleRefillUpdate);
 }
 

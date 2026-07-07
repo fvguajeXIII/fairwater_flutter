@@ -245,18 +245,35 @@
                     <input name="city" type="text" required />
                   </label>
                 </div>
-                <label class="field">
+                <label class="field address-lookup-field">
                   <span>Indirizzo</span>
-                  <input name="address" type="text" required />
+                  <div class="address-input-row">
+                    <input
+                      name="address"
+                      type="text"
+                      autocomplete="street-address"
+                      placeholder="Es: Via Roma 15 Fondi"
+                      required
+                    />
+                    <button
+                      class="address-search-button"
+                      type="button"
+                      aria-label="Cerca indirizzo"
+                      title="Cerca indirizzo"
+                    >
+                      &#128269;
+                    </button>
+                  </div>
+                  <div class="address-results" data-address-results></div>
                 </label>
                 <div class="form-grid two">
                   <label class="field">
                     <span>Latitudine</span>
-                    <input name="latitude" type="number" step="any" required />
+                    <input name="latitude" type="number" step="any" readonly required />
                   </label>
                   <label class="field">
                     <span>Longitudine</span>
-                    <input name="longitude" type="number" step="any" required />
+                    <input name="longitude" type="number" step="any" readonly required />
                   </label>
                 </div>
                 <div class="form-grid two">
@@ -422,18 +439,35 @@
                     <input name="city" type="text" required />
                   </label>
                 </div>
-                <label class="field">
+                <label class="field address-lookup-field">
                   <span>Indirizzo</span>
-                  <input name="address" type="text" required />
+                  <div class="address-input-row">
+                    <input
+                      name="address"
+                      type="text"
+                      autocomplete="street-address"
+                      placeholder="Es: Via Roma 15 Fondi"
+                      required
+                    />
+                    <button
+                      class="address-search-button"
+                      type="button"
+                      aria-label="Cerca indirizzo"
+                      title="Cerca indirizzo"
+                    >
+                      &#128269;
+                    </button>
+                  </div>
+                  <div class="address-results" data-address-results></div>
                 </label>
                 <div class="form-grid two">
                   <label class="field">
                     <span>Latitudine</span>
-                    <input name="latitude" type="number" step="any" required />
+                    <input name="latitude" type="number" step="any" readonly required />
                   </label>
                   <label class="field">
                     <span>Longitudine</span>
-                    <input name="longitude" type="number" step="any" required />
+                    <input name="longitude" type="number" step="any" readonly required />
                   </label>
                 </div>
                 <div class="form-grid two">
