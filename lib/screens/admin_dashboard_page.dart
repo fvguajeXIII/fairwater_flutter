@@ -24,6 +24,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+    
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -31,42 +33,85 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           title: const Text('Dashboard Admin'),
           backgroundColor: AppColors.deepOcean,
           elevation: 0,
+          toolbarHeight: isMobile ? 56 : 80,
           bottom: TabBar(
             onTap: (index) => setState(() => _selectedTabIndex = index),
+            isScrollable: isMobile,
             tabs: const [
               Tab(icon: Icon(Icons.store), text: 'Locali'),
               Tab(icon: Icon(Icons.handshake), text: 'Sponsor'),
               Tab(icon: Icon(Icons.people), text: 'Utenti'),
             ],
           ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Center(
-                child: Text(
-                  _authService.currentUser?.email ?? 'Non autenticato',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ElevatedButton.icon(
-                onPressed: () => _logout(context),
-                icon: const Icon(Icons.logout),
-                label: const Text('Logout'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                ),
-              ),
-            ),
-          ],
+          actions: isMobile
+              ? [
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: Colors.white),
+                    onSelected: (String result) {
+                      if (result == 'logout') {
+                        _logout(context);
+                      }
+                    },
+                    itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                      PopupMenuItem<String>(
+                        value: 'user',
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.person),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                _authService.currentUser?.email ?? 'Non autenticato',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem<String>(
+                        value: 'logout',
+                        child: Row(
+                          children: const [
+                            Icon(Icons.logout, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Logout'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ]
+              : [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Center(
+                      child: Text(
+                        _authService.currentUser?.email ?? 'Non autenticato',
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton.icon(
+                      onPressed: () => _logout(context),
+                      icon: const Icon(Icons.logout, size: 18),
+                      label: const Text('Logout'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                    ),
+                  ),
+                ],
         ),
         body: TabBarView(
           children: [
-            _buildBarsTab(),
-            _buildSponsorsTab(),
-            _buildUsersTab(),
+            _buildBarsTab(context),
+            _buildSponsorsTab(context),
+            _buildUsersTab(context),
           ],
         ),
         floatingActionButton: _selectedTabIndex == 0
@@ -86,79 +131,113 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  Widget _buildBarsTab() {
+  Widget _buildBarsTab(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+    
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(isMobile ? 12.0 : 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 16),
-            const Text(
+            const SizedBox(height: 8),
+            Text(
               'Gestione Locali',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: isMobile ? 20 : 24,
                 fontWeight: FontWeight.bold,
                 color: AppColors.deepOcean,
               ),
             ),
-            const SizedBox(height: 32),
-            _buildBarsManagement(),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => _showAddBarDialog(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Aggiungi Locale'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.ocean,
+                padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 24, vertical: isMobile ? 8 : 12),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildBarsManagement(context, isMobile),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSponsorsTab() {
+  Widget _buildSponsorsTab(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+    
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(isMobile ? 12.0 : 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 16),
-            const Text(
+            const SizedBox(height: 8),
+            Text(
               'Gestione Sponsor',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: isMobile ? 20 : 24,
                 fontWeight: FontWeight.bold,
                 color: AppColors.deepOcean,
               ),
             ),
-            const SizedBox(height: 32),
-            _buildSponsorsManagement(),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => _showAddSponsorDialog(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Aggiungi Sponsor'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.ocean,
+                padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 24, vertical: isMobile ? 8 : 12),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildSponsorsManagement(context, isMobile),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildUsersTab() {
+  Widget _buildUsersTab(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+    
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(isMobile ? 12.0 : 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 16),
-            const Text(
+            const SizedBox(height: 8),
+            Text(
               'Utenti Registrati',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: isMobile ? 20 : 24,
                 fontWeight: FontWeight.bold,
                 color: AppColors.deepOcean,
               ),
             ),
-            const SizedBox(height: 32),
-            _buildUsersManagement(),
+            const SizedBox(height: 16),
+            Text(
+              'Visualizza gli utenti registrati all\'applicazione',
+              style: TextStyle(
+                fontSize: isMobile ? 12 : 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildUsersManagement(context, isMobile),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBarsManagement() {
+  Widget _buildBarsManagement(BuildContext context, bool isMobile) {
     return StreamBuilder<List<BarSpot>>(
       stream: _barService.watchBars(),
       builder: (context, snapshot) {
@@ -190,28 +269,38 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
             ),
             const SizedBox(height: 16),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Nome')),
-                  DataColumn(label: Text('Città')),
-                  DataColumn(label: Text('Indirizzo')),
-                  DataColumn(label: Text('Refill Info')),
-                  DataColumn(label: Text('Azioni')),
-                ],
-                rows: bars
-                    .map((bar) => _buildBarTableRow(context, bar))
-                    .toList(),
-              ),
-            ),
+            isMobile
+                ? ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: bars.length,
+                    itemBuilder: (context, index) {
+                      final bar = bars[index];
+                      return _buildBarCard(context, bar);
+                    },
+                  )
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      columns: const [
+                        DataColumn(label: Text('Nome')),
+                        DataColumn(label: Text('Città')),
+                        DataColumn(label: Text('Indirizzo')),
+                        DataColumn(label: Text('Refill Info')),
+                        DataColumn(label: Text('Azioni')),
+                      ],
+                      rows: bars
+                          .map((bar) => _buildBarTableRow(context, bar))
+                          .toList(),
+                    ),
+                  ),
           ],
         );
       },
     );
   }
 
-  Widget _buildSponsorsManagement() {
+  Widget _buildSponsorsManagement(BuildContext context, bool isMobile) {
     return StreamBuilder<List<SponsorSpot>>(
       stream: _sponsorService.watchSponsors(),
       builder: (context, snapshot) {
@@ -243,28 +332,38 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
             ),
             const SizedBox(height: 16),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Nome')),
-                  DataColumn(label: Text('Categoria')),
-                  DataColumn(label: Text('Indirizzo')),
-                  DataColumn(label: Text('Featured')),
-                  DataColumn(label: Text('Azioni')),
-                ],
-                rows: sponsors
-                    .map((sponsor) => _buildSponsorTableRow(context, sponsor))
-                    .toList(),
-              ),
-            ),
+            isMobile
+                ? ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: sponsors.length,
+                    itemBuilder: (context, index) {
+                      final sponsor = sponsors[index];
+                      return _buildSponsorCard(context, sponsor);
+                    },
+                  )
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      columns: const [
+                        DataColumn(label: Text('Nome')),
+                        DataColumn(label: Text('Categoria')),
+                        DataColumn(label: Text('Indirizzo')),
+                        DataColumn(label: Text('Featured')),
+                        DataColumn(label: Text('Azioni')),
+                      ],
+                      rows: sponsors
+                          .map((sponsor) => _buildSponsorTableRow(context, sponsor))
+                          .toList(),
+                    ),
+                  ),
           ],
         );
       },
     );
   }
 
-  Widget _buildUsersManagement() {
+  Widget _buildUsersManagement(BuildContext context, bool isMobile) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance.collection('users').snapshots(),
       builder: (context, snapshot) {
@@ -282,7 +381,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
         if (users.isEmpty) {
           return const Center(
-            child: Text('Nessun utente registrato'),
+            child: Text('Nessun utente trovato'),
           );
         }
 
@@ -296,22 +395,103 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
             ),
             const SizedBox(height: 16),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Email')),
-                  DataColumn(label: Text('Stato')),
-                  DataColumn(label: Text('Data Registrazione')),
-                  DataColumn(label: Text('Ruoli')),
-                  DataColumn(label: Text('Azioni')),
-                ],
-                rows: users.map((userDoc) => _buildUserTableRow(context, userDoc)).toList(),
-              ),
-            ),
+            isMobile
+                ? ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: users.length,
+                    itemBuilder: (context, index) {
+                      final userDoc = users[index];
+                      return _buildUserCard(context, userDoc);
+                    },
+                  )
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      columns: const [
+                        DataColumn(label: Text('Email')),
+                        DataColumn(label: Text('Status')),
+                        DataColumn(label: Text('Data Registrazione')),
+                        DataColumn(label: Text('Ruoli')),
+                        DataColumn(label: Text('Azioni')),
+                      ],
+                      rows: users
+                          .map((userDoc) => _buildUserTableRow(context, userDoc))
+                          .toList(),
+                    ),
+                  ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildBarCard(BuildContext context, BarSpot bar) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    bar.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: AppColors.ocean, size: 20),
+                      onPressed: () => _showEditBarDialog(context, bar),
+                      tooltip: 'Modifica',
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      padding: EdgeInsets.zero,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                      onPressed: () => _deleteBar(context, bar.id),
+                      tooltip: 'Elimina',
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildInfoRow('Città', bar.city),
+            _buildInfoRow('Indirizzo', bar.address),
+            _buildInfoRow('Refill Info', bar.refillInfo),
+            if (bar.featured)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.ocean.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    '⭐ Featured',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.ocean,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -672,6 +852,145 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         );
       }
     }
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Text(
+            '$label: ',
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: AppColors.deepOcean,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSponsorCard(BuildContext context, SponsorSpot sponsor) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    sponsor.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: AppColors.ocean, size: 20),
+                      onPressed: () => _showEditSponsorDialog(context, sponsor),
+                      tooltip: 'Modifica',
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      padding: EdgeInsets.zero,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                      onPressed: () => _deleteSponsor(context, sponsor.id),
+                      tooltip: 'Elimina',
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildInfoRow('Categoria', sponsor.category),
+            _buildInfoRow('Indirizzo', sponsor.address),
+            _buildInfoRow('Contributo', sponsor.contribution),
+            if (sponsor.featured)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.ocean.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    '⭐ Featured',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.ocean,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserCard(BuildContext context, QueryDocumentSnapshot<Map<String, dynamic>> userDoc) {
+    final data = userDoc.data();
+    final email = data['email'] as String? ?? 'N/A';
+    final status = data['status'] as String? ?? 'active';
+    final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+    final roles = (data['roles'] as List<dynamic>?)?.cast<String>() ?? [];
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    email,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.visibility, color: AppColors.ocean, size: 20),
+                  onPressed: () => _showUserDetails(context, userDoc),
+                  tooltip: 'Dettagli',
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  padding: EdgeInsets.zero,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildInfoRow('Status', status),
+            _buildInfoRow('Data Registrazione', createdAt?.toString().split('.')[0] ?? 'N/A'),
+            _buildInfoRow('Ruoli', roles.isEmpty ? 'user' : roles.join(', ')),
+          ],
+        ),
+      ),
+    );
   }
 }
 
