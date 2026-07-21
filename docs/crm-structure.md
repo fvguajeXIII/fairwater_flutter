@@ -194,14 +194,14 @@ Queste restano valide e vanno integrate nel CRM come dati consultabili.
 
 Ruoli cumulabili nel campo `roles`:
 
-- `user`: utente standard dell'app
+- `customer`: utente standard dell'app (gli account storici possono avere `user`)
 - `refill_manager`: gestisce uno o piu punti refill
 - `sponsor_manager`: gestisce uno o piu sponsor
 - `admin`: accesso completo al CRM
 
 Valori consigliati per `accountType`:
 
-- `user`
+- `customer`
 - `refill_point`
 - `sponsor`
 - `admin`
@@ -289,16 +289,16 @@ Regola pratica:
 ### Registrazione utente standard
 
 1. L'utente crea account da app
-2. Si genera `users/{uid}` con `roles: ["user"]`
-3. `accountType` = `user`
+2. Si genera `users/{uid}` con `roles: ["customer"]`
+3. `accountType` = `customer`
 4. `status` = `active`
 
 ### Creazione utente da CRM
 
-1. L'admin crea un invito in `user_invites`
-2. L'utente completa onboarding
-3. Viene creato o aggiornato `users/{uid}`
-4. L'admin puo assegnare ruoli come `refill_manager` o `sponsor_manager`
+1. L'admin inserisce anagrafica, email e password temporanea nel CRM
+2. La Cloud Function crea l'account Firebase Auth e il profilo Firestore
+3. Per un Refiller assegna `roles: ["refill_manager"]` e `accountType: "refill_point"`
+4. Le credenziali vengono consegnate all'esercente
 
 ### Assegnazione punto refill
 

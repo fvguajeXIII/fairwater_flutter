@@ -24,7 +24,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return hasRole('admin');
+      return hasRole('admin') || hasRole('super_admin');
     }
 
     function isActiveUser() {
@@ -58,8 +58,8 @@ service cloud.firestore {
       allow create: if isAdmin() || (
         isSelf(userId) &&
         request.resource.data.uid == request.auth.uid &&
-        request.resource.data.roles == ['user'] &&
-        request.resource.data.accountType == 'user' &&
+        request.resource.data.roles == ['customer'] &&
+        request.resource.data.accountType == 'customer' &&
         request.resource.data.status == 'active'
       );
 
@@ -69,7 +69,10 @@ service cloud.firestore {
         request.resource.data.accountType == resource.data.accountType &&
         request.resource.data.status == resource.data.status &&
         request.resource.data.managedRefillPointIds == resource.data.managedRefillPointIds &&
-        request.resource.data.managedSponsorIds == resource.data.managedSponsorIds
+        request.resource.data.managedSponsorIds == resource.data.managedSponsorIds &&
+        request.resource.data.refillCount == resource.data.refillCount &&
+        request.resource.data.lastRefillAt == resource.data.lastRefillAt &&
+        request.resource.data.lastRefillerUid == resource.data.lastRefillerUid
       );
 
       allow delete: if false;
@@ -77,7 +80,8 @@ service cloud.firestore {
 
     match /users/{userId}/refill_events/{eventId} {
       allow read: if isAdmin() || isSelf(userId);
-      allow create: if isAdmin() || isSelf(userId);
+      // Gli eventi sono creati dalla Cloud Function con Admin SDK.
+      allow create: if isAdmin();
       allow update, delete: if false;
     }
 

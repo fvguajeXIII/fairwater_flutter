@@ -1,12 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-enum AdminRole {
-  superAdmin,
-  admin,
-  refillManager,
-  sponsorManager,
-}
+enum AdminRole { superAdmin, admin, refillManager, sponsorManager }
 
 extension AdminRoleExtension on AdminRole {
   String get value {
@@ -37,11 +32,9 @@ extension AdminRoleExtension on AdminRole {
 }
 
 class AdminService {
-  AdminService({
-    FirebaseFirestore? firestore,
-    FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+  AdminService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
@@ -76,7 +69,9 @@ class AdminService {
   /// Verifica se l'utente è un admin
   Future<bool> isUserAdmin() async {
     final roles = await getCurrentUserAdminRoles();
-    return roles.isNotEmpty;
+    return roles.contains(AdminRole.superAdmin) ||
+        roles.contains(AdminRole.admin) ||
+        roles.contains(AdminRole.sponsorManager);
   }
 
   /// Verifica se l'utente è super admin
@@ -113,10 +108,9 @@ class AdminService {
     final roles = (userDoc['roles'] as List<dynamic>?)?.cast<String>() ?? [];
     if (!roles.contains(role.value)) {
       roles.add(role.value);
-      await _firestore
-          .collection(usersCollection)
-          .doc(userId)
-          .update({'roles': roles});
+      await _firestore.collection(usersCollection).doc(userId).update({
+        'roles': roles,
+      });
     }
   }
 
@@ -142,10 +136,9 @@ class AdminService {
     final roles = (userDoc['roles'] as List<dynamic>?)?.cast<String>() ?? [];
     roles.removeWhere((r) => r == role.value);
 
-    await _firestore
-        .collection(usersCollection)
-        .doc(userId)
-        .update({'roles': roles});
+    await _firestore.collection(usersCollection).doc(userId).update({
+      'roles': roles,
+    });
   }
 
   /// Ottieni tutti gli admin

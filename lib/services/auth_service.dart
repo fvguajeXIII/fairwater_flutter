@@ -13,11 +13,10 @@ class AuthService {
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     GoogleSignIn? googleSignIn,
-  })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance,
-        _googleSignIn =
-            googleSignIn ??
-            GoogleSignIn(serverClientId: _googleServerClientId);
+  }) : _auth = auth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance,
+       _googleSignIn =
+           googleSignIn ?? GoogleSignIn(serverClientId: _googleServerClientId);
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
@@ -27,7 +26,11 @@ class AuthService {
 
   User? get currentUser => _auth.currentUser;
 
-  void _logGoogleSignIn(String message, [Object? error, StackTrace? stackTrace]) {
+  void _logGoogleSignIn(
+    String message, [
+    Object? error,
+    StackTrace? stackTrace,
+  ]) {
     if (!kDebugMode) {
       return;
     }
@@ -46,10 +49,7 @@ class AuthService {
     required String password,
   }) async {
     final credential = await _auth
-        .signInWithEmailAndPassword(
-          email: email.trim(),
-          password: password,
-        )
+        .signInWithEmailAndPassword(email: email.trim(), password: password)
         .timeout(_requestTimeout);
 
     await _ensureUserProfile(credential.user, provider: 'password');
@@ -66,10 +66,7 @@ class AuthService {
     String? referralCode,
   }) async {
     final credential = await _auth
-        .createUserWithEmailAndPassword(
-          email: email.trim(),
-          password: password,
-        )
+        .createUserWithEmailAndPassword(email: email.trim(), password: password)
         .timeout(_requestTimeout);
 
     final user = credential.user;
@@ -96,8 +93,8 @@ class AuthService {
           'referralCode': referralCode?.trim() ?? '',
           'photoUrl': '',
           'provider': 'password',
-          'roles': ['user'],
-          'accountType': 'user',
+          'roles': ['customer'],
+          'accountType': 'customer',
           'status': 'active',
           'managedRefillPointIds': [],
           'managedSponsorIds': [],
@@ -211,7 +208,10 @@ class AuthService {
     await _auth.signOut();
   }
 
-  Future<void> _ensureUserProfile(User? user, {required String provider}) async {
+  Future<void> _ensureUserProfile(
+    User? user, {
+    required String provider,
+  }) async {
     if (user == null) {
       return;
     }
@@ -220,13 +220,15 @@ class AuthService {
     final snapshot = await userDoc.get().timeout(_requestTimeout);
 
     if (snapshot.exists) {
-      await userDoc.set({
-        'email': user.email ?? '',
-        'displayName': user.displayName ?? '',
-        'photoUrl': user.photoURL ?? '',
-        'provider': provider,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true)).timeout(_requestTimeout);
+      await userDoc
+          .set({
+            'email': user.email ?? '',
+            'displayName': user.displayName ?? '',
+            'photoUrl': user.photoURL ?? '',
+            'provider': provider,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true))
+          .timeout(_requestTimeout);
       return;
     }
 
@@ -237,26 +239,28 @@ class AuthService {
     final firstName = nameParts.isNotEmpty ? nameParts.first : '';
     final lastName = nameParts.length > 1 ? nameParts.skip(1).join(' ') : '';
 
-    await userDoc.set({
-      'uid': user.uid,
-      'firstName': firstName,
-      'lastName': lastName,
-      'displayName': displayName,
-      'email': user.email ?? '',
-      'residence': '',
-      'phone': user.phoneNumber ?? '',
-      'referralCode': '',
-      'photoUrl': user.photoURL ?? '',
-      'provider': provider,
-      'roles': ['user'],
-      'accountType': 'user',
-      'status': 'active',
-      'managedRefillPointIds': [],
-      'managedSponsorIds': [],
-      'refillCount': 0,
-      'bottleOwnerSince': FieldValue.serverTimestamp(),
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }).timeout(_requestTimeout);
+    await userDoc
+        .set({
+          'uid': user.uid,
+          'firstName': firstName,
+          'lastName': lastName,
+          'displayName': displayName,
+          'email': user.email ?? '',
+          'residence': '',
+          'phone': user.phoneNumber ?? '',
+          'referralCode': '',
+          'photoUrl': user.photoURL ?? '',
+          'provider': provider,
+          'roles': ['customer'],
+          'accountType': 'customer',
+          'status': 'active',
+          'managedRefillPointIds': [],
+          'managedSponsorIds': [],
+          'refillCount': 0,
+          'bottleOwnerSince': FieldValue.serverTimestamp(),
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        })
+        .timeout(_requestTimeout);
   }
 }

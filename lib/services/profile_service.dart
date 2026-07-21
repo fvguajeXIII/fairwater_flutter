@@ -1,12 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class ProfileService {
-  ProfileService({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  ProfileService({FirebaseFirestore? firestore, FirebaseFunctions? functions})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _functions =
+          functions ?? FirebaseFunctions.instanceFor(region: 'europe-west1');
 
   static const double plasticSavedKgPerRefill = 0.025;
 
   final FirebaseFirestore _firestore;
+  final FirebaseFunctions _functions;
 
   Stream<FairWaterUserProfile> watchUserProfile(String uid) {
     return _firestore.collection('users').doc(uid).snapshots().map((snapshot) {
@@ -28,27 +32,16 @@ class ProfileService {
     });
   }
 
-  Future<void> recordRefill({required String uid, String? source}) async {
-    final userRef = _firestore.collection('users').doc(uid);
-    final eventRef = userRef.collection('refill_events').doc();
-
-    await _firestore.runTransaction((transaction) async {
-      final snapshot = await transaction.get(userRef);
-      final data = snapshot.data() ?? <String, dynamic>{};
-      final currentCount = (data['refillCount'] as num?)?.toInt() ?? 0;
-
-      transaction.set(userRef, {
-        'refillCount': currentCount + 1,
-        'bottleOwnerSince':
-            data['bottleOwnerSince'] ?? FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      transaction.set(eventRef, {
-        'source': source ?? 'qr-scan',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+  Future<RecordedRefill> recordCustomerRefill(String qrPayload) async {
+    final result = await _functions.httpsCallable('recordCustomerRefill').call({
+      'qrPayload': qrPayload,
     });
+    final data = Map<String, dynamic>.from(result.data as Map);
+    return RecordedRefill(
+      customerName: (data['customerName'] as String? ?? '').trim(),
+      customerRefillCount: (data['customerRefillCount'] as num?)?.toInt() ?? 0,
+      refillerRefillCount: (data['refillerRefillCount'] as num?)?.toInt() ?? 0,
+    );
   }
 
   Future<void> updateProfileImage({
@@ -78,6 +71,8 @@ class FairWaterUserProfile {
     required this.refillCount,
     required this.createdAt,
     required this.bottleOwnerSince,
+    required this.roles,
+    required this.accountType,
   });
 
   factory FairWaterUserProfile.fromSnapshot(
@@ -109,6 +104,12 @@ class FairWaterUserProfile {
       refillCount: (data['refillCount'] as num?)?.toInt() ?? 0,
       createdAt: createdAt,
       bottleOwnerSince: bottleOwnerSince,
+      roles:
+          (data['roles'] as List<dynamic>?)?.whereType<String>().toList(
+            growable: false,
+          ) ??
+          const ['user'],
+      accountType: (data['accountType'] as String? ?? 'user').trim(),
     );
   }
 
@@ -126,6 +127,11 @@ class FairWaterUserProfile {
   final int refillCount;
   final DateTime? createdAt;
   final DateTime? bottleOwnerSince;
+  final List<String> roles;
+  final String accountType;
+
+  bool get isRefiller =>
+      accountType == 'refill_point' || roles.contains('refill_manager');
 
   String get fullName {
     if (displayName.isNotEmpty) {
@@ -159,6 +165,18 @@ class FairWaterUserProfile {
 
   double get plasticSavedKg =>
       refillCount * ProfileService.plasticSavedKgPerRefill;
+}
+
+class RecordedRefill {
+  const RecordedRefill({
+    required this.customerName,
+    required this.customerRefillCount,
+    required this.refillerRefillCount,
+  });
+
+  final String customerName;
+  final int customerRefillCount;
+  final int refillerRefillCount;
 }
 
 class FairWaterCommunityStats {

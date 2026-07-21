@@ -14,8 +14,9 @@ import '../services/profile_service.dart';
 import '../services/refill_notification_service.dart';
 import '../services/sponsor_service.dart';
 import '../theme/app_theme.dart';
+import 'customer_qr_page.dart';
 import 'profile_page.dart';
-import 'qr_scanner_page.dart';
+import 'refiller_home_page.dart';
 
 const Color _kPrimary = AppColors.ocean;
 const Color _kPrimaryDark = AppColors.deepOcean;
@@ -128,12 +129,12 @@ class _HomePageState extends State<HomePage> {
   LatLng? _pendingMapCenter;
   bool _seedingBars = false;
   StreamSubscription<Position>? _positionSubscription;
+  int? _lastObservedRefillCount;
+  bool _customerInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _seedBarsIfNeeded();
-    _loadLocation();
   }
 
   @override
@@ -288,6 +289,44 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = _authService.currentUser;
+    if (user == null) return const SizedBox.shrink();
+
+    return StreamBuilder<FairWaterUserProfile>(
+      stream: _profileService.watchUserProfile(user.uid),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: WaterBackdrop(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+        final profile = snapshot.data!;
+        if (profile.isRefiller) return RefillerHomePage();
+
+        if (!_customerInitialized) {
+          _customerInitialized = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _seedBarsIfNeeded();
+            _loadLocation();
+          });
+        }
+
+        final previousCount = _lastObservedRefillCount;
+        _lastObservedRefillCount = profile.refillCount;
+        if (previousCount != null && profile.refillCount > previousCount) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _showRefillThankYou();
+          });
+        }
+        return _buildCustomerShell(profile);
+      },
+    );
+  }
+
+  Widget _buildCustomerShell(FairWaterUserProfile profile) {
     final pages = <Widget>[
       _buildHomeTab(),
       _buildRefillTab(),
@@ -300,16 +339,10 @@ class _HomePageState extends State<HomePage> {
       body: IndexedStack(index: _selectedIndex, children: pages),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: _QrScanButton(
-        onPressed: () async {
-          final scannedValue = await Navigator.of(context).push<String>(
-            MaterialPageRoute(builder: (_) => const QrScannerPage()),
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => CustomerQrPage(profile: profile)),
           );
-          if (!context.mounted ||
-              scannedValue == null ||
-              scannedValue.isEmpty) {
-            return;
-          }
-          await _handleScannedRefill(scannedValue);
         },
       ),
       bottomNavigationBar: _BottomNavBar(
@@ -499,36 +532,28 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _handleScannedRefill(String scannedValue) async {
-    final user = _authService.currentUser;
-    if (user == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Accedi per registrare i refill nel tuo profilo.'),
+  Future<void> _showRefillThankYou() {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(
+          Icons.water_drop_rounded,
+          color: AppColors.ocean,
+          size: 48,
         ),
-      );
-      return;
-    }
-
-    try {
-      await _profileService.recordRefill(uid: user.uid, source: scannedValue);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Refill registrato. Il tuo profilo e stato aggiornato.',
+        title: const Text('Grazie per il tuo refill!'),
+        content: const Text(
+          'Le statistiche del tuo profilo sono state aggiornate. Un piccolo gesto, un grande impatto.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Continua'),
           ),
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Non riesco a registrare il refill in questo momento.'),
-        ),
-      );
-    }
+        ],
+      ),
+    );
   }
 }
 
@@ -667,7 +692,7 @@ class _QrScanButton extends StatelessWidget {
         foregroundColor: Colors.white,
         shape: const CircleBorder(),
         onPressed: onPressed,
-        child: const Icon(Icons.qr_code_scanner_rounded, size: 28),
+        child: const Icon(Icons.qr_code_2_rounded, size: 30),
       ),
     );
   }

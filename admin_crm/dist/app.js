@@ -20,6 +20,10 @@ import {
   updateDoc,
   writeBatch,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getFunctions,
+  httpsCallable,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDUtIYqhpqrBzprag_IAIWF2QfwOwSll54",
@@ -39,6 +43,7 @@ const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const userAdminAuth = getAuth(userAdminApp);
 const userAdminDb = getFirestore(userAdminApp);
+const userAdminFunctions = getFunctions(userAdminApp, "europe-west1");
 
 const LOGIN_USERNAME = "FairWater";
 const LOGIN_PASSWORD = "FairWater2026!";
@@ -862,35 +867,27 @@ async function handleUserCreate(event) {
   const firstName = safeText(formData.get("firstName"));
   const lastName = safeText(formData.get("lastName"));
   const email = safeText(formData.get("email")).toLowerCase();
-  const role = safeText(formData.get("role")) || "user";
+  const role = safeText(formData.get("role")) || "customer";
   const status = safeText(formData.get("status")) || "active";
-  const userId =
-    safeText(email).replace(/[^a-z0-9]+/gi, "-") + "-" + Date.now().toString();
 
   try {
-    await setDoc(doc(userAdminDb, "users", userId), {
-      uid: userId,
+    const createManagedUser = httpsCallable(
+      userAdminFunctions,
+      "createManagedUser"
+    );
+    await createManagedUser({
       firstName,
       lastName,
-      displayName: `${firstName} ${lastName}`.trim(),
       email,
+      password: String(formData.get("password") || ""),
       phone: safeText(formData.get("phone")),
       residence: safeText(formData.get("residence")),
-      photoUrl: "",
-      photoBase64: "",
-      provider: "crm",
-      roles: [role],
-      accountType: role === "admin" ? "admin" : "user",
+      role,
       status,
-      managedRefillPointIds: [],
-      managedSponsorIds: [],
-      refillCount: 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
     });
 
     form.reset();
-    setStatus("Profilo utente salvato in Firestore.", "success");
+    setStatus("Account creato in Firebase Auth e profilo salvato.", "success");
   } catch (error) {
     setStatus(`Errore salvataggio utente: ${error.message}`, "error");
   }
