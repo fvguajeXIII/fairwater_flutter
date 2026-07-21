@@ -112,11 +112,8 @@ class LoginPage extends StatelessWidget {
                                 ),
                               ),
                               TextButton(
-                                onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const RegisterPage(),
-                                  ),
-                                ),
+                                onPressed: () => Navigator.of(context)
+                                    .pushNamed('/onboarding'),
                                 child: const Text(
                                   'Crea account',
                                   style: TextStyle(
@@ -579,9 +576,7 @@ class _LoginSheetState extends State<_LoginSheet> {
                   if (navigator.canPop()) {
                     navigator.pop();
                     WidgetsBinding.instance.addPostFrameCallback((_) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const RegisterPage()),
-                      );
+                      Navigator.of(context).pushNamed('/onboarding');
                     });
                   }
                 },

@@ -14,6 +14,8 @@ class BarSpot {
     required this.socialLinks,
     required this.galleryImages,
     required this.featured,
+    this.postalCode = '',
+    this.googlePlaceId = '',
   });
 
   final String id;
@@ -27,6 +29,8 @@ class BarSpot {
   final Map<String, String> socialLinks;
   final List<String> galleryImages;
   final bool featured;
+  final String postalCode;
+  final String googlePlaceId;
 
   factory BarSpot.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const <String, dynamic>{};
@@ -66,6 +70,8 @@ class BarSpot {
           .take(6)
           .toList(),
       featured: data['featured'] == true,
+      postalCode: (data['postalCode'] as String? ?? '').trim(),
+      googlePlaceId: (data['googlePlaceId'] as String? ?? '').trim(),
     );
   }
 
@@ -82,6 +88,8 @@ class BarSpot {
       'socialLinks': socialLinks,
       'galleryImages': galleryImages,
       'featured': featured,
+      'postalCode': postalCode,
+      'googlePlaceId': googlePlaceId,
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }

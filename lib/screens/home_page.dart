@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../config/app_config.dart';
 import '../services/auth_service.dart';
 import '../services/bar_service.dart';
 import '../services/profile_service.dart';
@@ -20,6 +21,10 @@ const Color _kPrimary = AppColors.ocean;
 const Color _kPrimaryDark = AppColors.deepOcean;
 const Color _kSurface = AppColors.foam;
 const double _kNearbyRadiusMeters = 5000;
+const String _kGeoapifyTileUrl =
+    'https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey={apiKey}';
+const String _kOpenStreetMapTileUrl =
+    'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const List<SponsorSpot> _kSampleSponsors = [
   SponsorSpot(
     id: 'emporio-del-corso',
@@ -71,7 +76,8 @@ const List<SponsorSpot> _kSampleSponsors = [
     name: 'Officina Verde',
     category: 'Mobilita sostenibile',
     address: 'Via Appia Lato Roma 95, Fondi',
-    contribution: 'Supporto tecnico per iniziative legate a mobilita e territorio.',
+    contribution:
+        'Supporto tecnico per iniziative legate a mobilita e territorio.',
     thankYouMessage:
         'La vostra sensibilita verso il territorio ha dato forza concreta alla visione del progetto.',
     supports: ['Territorio', 'Tecnica', 'Sostenibilita'],
@@ -258,23 +264,24 @@ class _HomePageState extends State<HomePage> {
 
   List<_NearbyBarView> _nearbyBars(List<BarSpot> bars) {
     final center = _currentLatLng;
-    final nearbyBars = bars
-        .map((bar) {
-          final distanceMeters = Geolocator.distanceBetween(
-            center.latitude,
-            center.longitude,
-            bar.location.latitude,
-            bar.location.longitude,
-          );
-          return _NearbyBarView(
-            bar: bar,
-            location: bar.location,
-            distanceMeters: distanceMeters,
-          );
-        })
-        .where((bar) => bar.distanceMeters <= _kNearbyRadiusMeters)
-        .toList()
-      ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
+    final nearbyBars =
+        bars
+            .map((bar) {
+              final distanceMeters = Geolocator.distanceBetween(
+                center.latitude,
+                center.longitude,
+                bar.location.latitude,
+                bar.location.longitude,
+              );
+              return _NearbyBarView(
+                bar: bar,
+                location: bar.location,
+                distanceMeters: distanceMeters,
+              );
+            })
+            .where((bar) => bar.distanceMeters <= _kNearbyRadiusMeters)
+            .toList()
+          ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
 
     return nearbyBars;
   }
@@ -295,11 +302,11 @@ class _HomePageState extends State<HomePage> {
       floatingActionButton: _QrScanButton(
         onPressed: () async {
           final scannedValue = await Navigator.of(context).push<String>(
-            MaterialPageRoute(
-              builder: (_) => const QrScannerPage(),
-            ),
+            MaterialPageRoute(builder: (_) => const QrScannerPage()),
           );
-          if (!context.mounted || scannedValue == null || scannedValue.isEmpty) {
+          if (!context.mounted ||
+              scannedValue == null ||
+              scannedValue.isEmpty) {
             return;
           }
           await _handleScannedRefill(scannedValue);
@@ -399,8 +406,9 @@ class _HomePageState extends State<HomePage> {
                           final view = nearbyBars[index ~/ 2];
                           return _BarCard(view: view);
                         },
-                        childCount:
-                            nearbyBars.isEmpty ? 0 : nearbyBars.length * 2 - 1,
+                        childCount: nearbyBars.isEmpty
+                            ? 0
+                            : nearbyBars.length * 2 - 1,
                       ),
                     ),
                   ),
@@ -440,16 +448,13 @@ class _HomePageState extends State<HomePage> {
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
                     sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          if (index.isOdd) {
-                            return const SizedBox(height: 14);
-                          }
-                          final bar = bars[index ~/ 2];
-                          return _RefillSpotCard(bar: bar);
-                        },
-                        childCount: bars.length * 2 - 1,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        if (index.isOdd) {
+                          return const SizedBox(height: 14);
+                        }
+                        final bar = bars[index ~/ 2];
+                        return _RefillSpotCard(bar: bar);
+                      }, childCount: bars.length * 2 - 1),
                     ),
                   ),
               ],
@@ -465,8 +470,9 @@ class _HomePageState extends State<HomePage> {
       stream: _sponsorService.watchSponsors(),
       builder: (context, snapshot) {
         final firestoreSponsors = snapshot.data ?? const <SponsorSpot>[];
-        final sponsors =
-            firestoreSponsors.isNotEmpty ? firestoreSponsors : _kSampleSponsors;
+        final sponsors = firestoreSponsors.isNotEmpty
+            ? firestoreSponsors
+            : _kSampleSponsors;
 
         return WaterBackdrop(
           child: SafeArea(
@@ -476,16 +482,13 @@ class _HomePageState extends State<HomePage> {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        if (index.isOdd) {
-                          return const SizedBox(height: 14);
-                        }
-                        final sponsor = sponsors[index ~/ 2];
-                        return _SponsorCard(sponsor: sponsor);
-                      },
-                      childCount: sponsors.length * 2 - 1,
-                    ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      if (index.isOdd) {
+                        return const SizedBox(height: 14);
+                      }
+                      final sponsor = sponsors[index ~/ 2];
+                      return _SponsorCard(sponsor: sponsor);
+                    }, childCount: sponsors.length * 2 - 1),
                   ),
                 ),
               ],
@@ -513,7 +516,9 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Refill registrato. Il tuo profilo e stato aggiornato.'),
+          content: Text(
+            'Refill registrato. Il tuo profilo e stato aggiornato.',
+          ),
         ),
       );
     } catch (_) {
@@ -528,10 +533,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _BottomNavBar extends StatelessWidget {
-  const _BottomNavBar({
-    required this.currentIndex,
-    required this.onSelected,
-  });
+  const _BottomNavBar({required this.currentIndex, required this.onSelected});
 
   final int currentIndex;
   final ValueChanged<int> onSelected;
@@ -671,12 +673,8 @@ class _QrScanButton extends StatelessWidget {
   }
 }
 
-
 class _PlaceholderTab extends StatelessWidget {
-  const _PlaceholderTab({
-    required this.icon,
-    required this.title,
-  });
+  const _PlaceholderTab({required this.icon, required this.title});
 
   final IconData icon;
   final String title;
@@ -898,10 +896,7 @@ class _RefillSpotCard extends StatelessWidget {
           if (socialEntries.isEmpty)
             Text(
               'Pagine social in aggiornamento.',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.slate,
-              ),
+              style: TextStyle(fontSize: 13, color: AppColors.slate),
             )
           else
             Wrap(
@@ -1042,11 +1037,7 @@ class _SponsorCard extends StatelessWidget {
             ),
             child: Text(
               sponsor.thankYouMessage,
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.5,
-                color: AppColors.ink,
-              ),
+              style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.ink),
             ),
           ),
           const SizedBox(height: 20),
@@ -1074,10 +1065,7 @@ class _SponsorCard extends StatelessWidget {
           if (socialEntries.isEmpty)
             Text(
               'Pagine social in aggiornamento.',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.slate,
-              ),
+              style: TextStyle(fontSize: 13, color: AppColors.slate),
             )
           else
             Wrap(
@@ -1194,10 +1182,7 @@ class _GalleryImage extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    this.trailing,
-  });
+  const _SectionHeader({required this.title, this.trailing});
 
   final String title;
   final String? trailing;
@@ -1230,10 +1215,7 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _RefillDetailRow extends StatelessWidget {
-  const _RefillDetailRow({
-    required this.icon,
-    required this.text,
-  });
+  const _RefillDetailRow({required this.icon, required this.text});
 
   final IconData icon;
   final String text;
@@ -1427,13 +1409,8 @@ class _SocialLinkButton extends StatelessWidget {
         side: const BorderSide(color: AppColors.border),
         backgroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        textStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
         elevation: 0,
       ),
     );
@@ -1466,11 +1443,7 @@ class _EmptyRefillCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Quando i locali saranno attivi, qui compariranno schede con orari, servizi e link social.',
-            style: TextStyle(
-              fontSize: 13,
-              height: 1.4,
-              color: AppColors.slate,
-            ),
+            style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.slate),
           ),
         ],
       ),
@@ -1528,8 +1501,13 @@ class _LiveMapCard extends StatelessWidget {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'fairwater',
+                  urlTemplate: geoapifyApiKey.isNotEmpty
+                      ? _kGeoapifyTileUrl
+                      : _kOpenStreetMapTileUrl,
+                  additionalOptions: geoapifyApiKey.isNotEmpty
+                      ? const {'apiKey': geoapifyApiKey}
+                      : const {},
+                  userAgentPackageName: 'com.example.fairwater',
                 ),
                 MarkerLayer(
                   markers: [
@@ -1549,6 +1527,25 @@ class _LiveMapCard extends StatelessWidget {
                           subtitle: _formatDistance(view.distanceMeters),
                           highlighted: view.bar.featured,
                         ),
+                      ),
+                    ),
+                  ],
+                ),
+                RichAttributionWidget(
+                  attributions: [
+                    if (geoapifyApiKey.isNotEmpty)
+                      TextSourceAttribution(
+                        'Geoapify',
+                        onTap: () => launchUrl(
+                          Uri.parse('https://www.geoapify.com/'),
+                          mode: LaunchMode.externalApplication,
+                        ),
+                      ),
+                    TextSourceAttribution(
+                      'OpenStreetMap contributors',
+                      onTap: () => launchUrl(
+                        Uri.parse('https://www.openstreetmap.org/copyright'),
+                        mode: LaunchMode.externalApplication,
                       ),
                     ),
                   ],
@@ -1772,10 +1769,7 @@ class _BarCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       _buildAddress(view.bar),
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.slate,
-                      ),
+                      style: TextStyle(fontSize: 13, color: AppColors.slate),
                     ),
                     const SizedBox(height: 10),
                     Wrap(
@@ -1862,11 +1856,7 @@ class _EmptyNearbyBarsCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Prova ad aggiornare la posizione o spostati leggermente per vedere altri punti vicini.',
-            style: TextStyle(
-              fontSize: 13,
-              height: 1.4,
-              color: AppColors.slate,
-            ),
+            style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.slate),
           ),
         ],
       ),
@@ -1971,10 +1961,7 @@ Future<void> _openGalleryViewer(
   );
 }
 
-Future<void> _openNavigation(
-  BuildContext context,
-  _NearbyBarView view,
-) async {
+Future<void> _openNavigation(BuildContext context, _NearbyBarView view) async {
   final destinationLabel = Uri.encodeComponent(view.bar.name);
   final latitude = view.location.latitude;
   final longitude = view.location.longitude;
@@ -2018,9 +2005,9 @@ Future<void> _launchExternalLink(
     if (!context.mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(failureMessage)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(failureMessage)));
     return;
   }
 
@@ -2032,9 +2019,9 @@ Future<void> _launchExternalLink(
     return;
   }
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(failureMessage)),
-  );
+  ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text(failureMessage)));
 }
 
 String _socialLabel(String key) {

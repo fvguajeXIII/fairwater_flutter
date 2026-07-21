@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../services/address_search_service.dart';
 import '../services/admin_service.dart';
 import '../services/auth_service.dart';
 import '../services/bar_service.dart';
@@ -29,7 +30,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 768;
-    
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -56,35 +57,37 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         _logout(context);
                       }
                     },
-                    itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                      PopupMenuItem<String>(
-                        value: 'user',
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.person),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                _authService.currentUser?.email ?? 'Non autenticato',
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                    itemBuilder: (BuildContext context) =>
+                        <PopupMenuEntry<String>>[
+                          PopupMenuItem<String>(
+                            value: 'user',
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.person),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    _authService.currentUser?.email ??
+                                        'Non autenticato',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuDivider(),
-                      PopupMenuItem<String>(
-                        value: 'logout',
-                        child: Row(
-                          children: const [
-                            Icon(Icons.logout, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Logout'),
-                          ],
-                        ),
-                      ),
-                    ],
+                          ),
+                          const PopupMenuDivider(),
+                          PopupMenuItem<String>(
+                            value: 'logout',
+                            child: Row(
+                              children: const [
+                                Icon(Icons.logout, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text('Logout'),
+                              ],
+                            ),
+                          ),
+                        ],
                   ),
                 ]
               : [
@@ -93,7 +96,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     child: Center(
                       child: Text(
                         _authService.currentUser?.email ?? 'Non autenticato',
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -125,19 +131,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 child: const Icon(Icons.add),
               )
             : _selectedTabIndex == 1
-                ? FloatingActionButton(
-                    backgroundColor: AppColors.ocean,
-                    onPressed: () => _showAddSponsorDialog(context),
-                    child: const Icon(Icons.add),
-                  )
-                : null,
+            ? FloatingActionButton(
+                backgroundColor: AppColors.ocean,
+                onPressed: () => _showAddSponsorDialog(context),
+                child: const Icon(Icons.add),
+              )
+            : null,
       ),
     );
   }
 
   Widget _buildBarsTab(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 768;
-    
+
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.all(isMobile ? 12.0 : 16.0),
@@ -160,7 +166,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               label: const Text('Aggiungi Locale'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.ocean,
-                padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 24, vertical: isMobile ? 8 : 12),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 12 : 24,
+                  vertical: isMobile ? 8 : 12,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -173,7 +182,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   Widget _buildSponsorsTab(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 768;
-    
+
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.all(isMobile ? 12.0 : 16.0),
@@ -196,7 +205,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               label: const Text('Aggiungi Sponsor'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.ocean,
-                padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 24, vertical: isMobile ? 8 : 12),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 12 : 24,
+                  vertical: isMobile ? 8 : 12,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -209,7 +221,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   Widget _buildUsersTab(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 768;
-    
+
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.all(isMobile ? 12.0 : 16.0),
@@ -250,27 +262,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Text('Errore: ${snapshot.error}'),
-          );
+          return Center(child: Text('Errore: ${snapshot.error}'));
         }
 
         final bars = snapshot.data ?? [];
 
         if (bars.isEmpty) {
-          return const Center(
-            child: Text('Nessun locale trovato'),
-          );
+          return const Center(child: Text('Nessun locale trovato'));
         }
 
         return Column(
           children: [
             Text(
               'Locali registrati: ${bars.length}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
             isMobile
@@ -313,27 +318,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Text('Errore: ${snapshot.error}'),
-          );
+          return Center(child: Text('Errore: ${snapshot.error}'));
         }
 
         final sponsors = snapshot.data ?? [];
 
         if (sponsors.isEmpty) {
-          return const Center(
-            child: Text('Nessuno sponsor trovato'),
-          );
+          return const Center(child: Text('Nessuno sponsor trovato'));
         }
 
         return Column(
           children: [
             Text(
               'Sponsor registrati: ${sponsors.length}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
             isMobile
@@ -357,7 +355,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         DataColumn(label: Text('Azioni')),
                       ],
                       rows: sponsors
-                          .map((sponsor) => _buildSponsorTableRow(context, sponsor))
+                          .map(
+                            (sponsor) =>
+                                _buildSponsorTableRow(context, sponsor),
+                          )
                           .toList(),
                     ),
                   ),
@@ -376,27 +377,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Text('Errore: ${snapshot.error}'),
-          );
+          return Center(child: Text('Errore: ${snapshot.error}'));
         }
 
         final users = snapshot.data?.docs ?? [];
 
         if (users.isEmpty) {
-          return const Center(
-            child: Text('Nessun utente trovato'),
-          );
+          return const Center(child: Text('Nessun utente trovato'));
         }
 
         return Column(
           children: [
             Text(
               'Utenti registrati: ${users.length}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
             isMobile
@@ -420,7 +414,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         DataColumn(label: Text('Azioni')),
                       ],
                       rows: users
-                          .map((userDoc) => _buildUserTableRow(context, userDoc))
+                          .map(
+                            (userDoc) => _buildUserTableRow(context, userDoc),
+                          )
                           .toList(),
                     ),
                   ),
@@ -453,17 +449,31 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.edit, color: AppColors.ocean, size: 20),
+                      icon: const Icon(
+                        Icons.edit,
+                        color: AppColors.ocean,
+                        size: 20,
+                      ),
                       onPressed: () => _showEditBarDialog(context, bar),
                       tooltip: 'Modifica',
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
                       padding: EdgeInsets.zero,
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                      icon: const Icon(
+                        Icons.delete,
+                        color: Colors.red,
+                        size: 20,
+                      ),
                       onPressed: () => _deleteBar(context, bar.id),
                       tooltip: 'Elimina',
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
                       padding: EdgeInsets.zero,
                     ),
                   ],
@@ -478,9 +488,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppColors.ocean.withOpacity(0.2),
+                    color: AppColors.ocean.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
@@ -555,7 +568,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  DataRow _buildUserTableRow(BuildContext context, QueryDocumentSnapshot<Map<String, dynamic>> userDoc) {
+  DataRow _buildUserTableRow(
+    BuildContext context,
+    QueryDocumentSnapshot<Map<String, dynamic>> userDoc,
+  ) {
     final data = userDoc.data();
     final email = data['email'] as String? ?? 'N/A';
     final status = data['status'] as String? ?? 'active';
@@ -623,9 +639,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Errore: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Errore: $e')));
       }
     }
   }
@@ -642,9 +658,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Errore: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Errore: $e')));
       }
     }
   }
@@ -671,10 +687,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
     if (confirm == true) {
       try {
-        await FirebaseFirestore.instance
-            .collection('bars')
-            .doc(barId)
-            .delete();
+        await FirebaseFirestore.instance.collection('bars').doc(barId).delete();
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -683,9 +696,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Errore: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Errore: $e')));
         }
       }
     }
@@ -732,9 +745,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Errore: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Errore: $e')));
       }
     }
   }
@@ -753,9 +766,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Errore: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Errore: $e')));
       }
     }
   }
@@ -794,9 +807,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Errore: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Errore: $e')));
         }
       }
     }
@@ -804,7 +817,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   // ============ USERS METHODS ============
 
-  void _showUserDetails(BuildContext context, QueryDocumentSnapshot<Map<String, dynamic>> userDoc) {
+  void _showUserDetails(
+    BuildContext context,
+    QueryDocumentSnapshot<Map<String, dynamic>> userDoc,
+  ) {
     final data = userDoc.data();
     final email = data['email'] as String? ?? 'N/A';
     final status = data['status'] as String? ?? 'active';
@@ -827,7 +843,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               const SizedBox(height: 8),
               Text('Tipo Account: $accountType'),
               const SizedBox(height: 8),
-              Text('Data Registrazione: ${createdAt?.toString().split('.')[0] ?? 'N/A'}'),
+              Text(
+                'Data Registrazione: ${createdAt?.toString().split('.')[0] ?? 'N/A'}',
+              ),
               const SizedBox(height: 8),
               Text('Ruoli: ${roles.isEmpty ? 'user' : roles.join(', ')}'),
             ],
@@ -851,9 +869,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Errore logout: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Errore logout: $e')));
       }
     }
   }
@@ -906,17 +924,31 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.edit, color: AppColors.ocean, size: 20),
+                      icon: const Icon(
+                        Icons.edit,
+                        color: AppColors.ocean,
+                        size: 20,
+                      ),
                       onPressed: () => _showEditSponsorDialog(context, sponsor),
                       tooltip: 'Modifica',
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
                       padding: EdgeInsets.zero,
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                      icon: const Icon(
+                        Icons.delete,
+                        color: Colors.red,
+                        size: 20,
+                      ),
                       onPressed: () => _deleteSponsor(context, sponsor.id),
                       tooltip: 'Elimina',
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
                       padding: EdgeInsets.zero,
                     ),
                   ],
@@ -931,9 +963,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppColors.ocean.withOpacity(0.2),
+                    color: AppColors.ocean.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
@@ -952,7 +987,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  Widget _buildUserCard(BuildContext context, QueryDocumentSnapshot<Map<String, dynamic>> userDoc) {
+  Widget _buildUserCard(
+    BuildContext context,
+    QueryDocumentSnapshot<Map<String, dynamic>> userDoc,
+  ) {
     final data = userDoc.data();
     final email = data['email'] as String? ?? 'N/A';
     final status = data['status'] as String? ?? 'active';
@@ -979,17 +1017,27 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.visibility, color: AppColors.ocean, size: 20),
+                  icon: const Icon(
+                    Icons.visibility,
+                    color: AppColors.ocean,
+                    size: 20,
+                  ),
                   onPressed: () => _showUserDetails(context, userDoc),
                   tooltip: 'Dettagli',
-                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
                   padding: EdgeInsets.zero,
                 ),
               ],
             ),
             const SizedBox(height: 8),
             _buildInfoRow('Status', status),
-            _buildInfoRow('Data Registrazione', createdAt?.toString().split('.')[0] ?? 'N/A'),
+            _buildInfoRow(
+              'Data Registrazione',
+              createdAt?.toString().split('.')[0] ?? 'N/A',
+            ),
             _buildInfoRow('Ruoli', roles.isEmpty ? 'user' : roles.join(', ')),
           ],
         ),
@@ -1021,17 +1069,21 @@ class _BarFormDialogState extends State<_BarFormDialog> {
   late TextEditingController cityController;
   late TextEditingController latitudeController;
   late TextEditingController longitudeController;
+  late TextEditingController postalCodeController;
   late TextEditingController refillInfoController;
   late TextEditingController openInfoController;
   late TextEditingController idController;
 
   late List<String> services;
+  late Map<String, String> socialLinks;
   bool featured = false;
   Timer? _addressSearchDebounce;
   bool _isSearchingAddress = false;
   String? _addressSearchError;
-  List<_AddressSearchResult> _addressResults = [];
-  _AddressSearchResult? _selectedAddressResult;
+  final AddressSearchService _addressSearchService = AddressSearchService();
+  List<AddressSuggestion> _addressResults = [];
+  AddressDetails? _selectedAddress;
+  late String _addressSessionToken;
 
   @override
   void initState() {
@@ -1042,17 +1094,24 @@ class _BarFormDialogState extends State<_BarFormDialog> {
     addressController = TextEditingController(text: bar?.address ?? '');
     addressController.addListener(_onAddressChanged);
     cityController = TextEditingController(text: bar?.city ?? '');
-    latitudeController =
-        TextEditingController(text: bar?.location.latitude.toString() ?? '');
-    longitudeController =
-        TextEditingController(text: bar?.location.longitude.toString() ?? '');
-    refillInfoController =
-        TextEditingController(text: bar?.refillInfo ?? 'Punto refill');
-    openInfoController =
-        TextEditingController(text: bar?.openInfo ?? 'Lun-Dom 08:00-23:00');
+    latitudeController = TextEditingController(
+      text: bar?.location.latitude.toString() ?? '',
+    );
+    longitudeController = TextEditingController(
+      text: bar?.location.longitude.toString() ?? '',
+    );
+    postalCodeController = TextEditingController(text: bar?.postalCode ?? '');
+    _addressSessionToken = _newAddressSessionToken();
+    refillInfoController = TextEditingController(
+      text: bar?.refillInfo ?? 'Punto refill',
+    );
+    openInfoController = TextEditingController(
+      text: bar?.openInfo ?? 'Lun-Dom 08:00-23:00',
+    );
     idController = TextEditingController(text: bar?.id ?? '');
 
     services = bar?.services.toList() ?? [];
+    socialLinks = Map<String, String>.from(bar?.socialLinks ?? const {});
     featured = bar?.featured ?? false;
   }
 
@@ -1064,6 +1123,7 @@ class _BarFormDialogState extends State<_BarFormDialog> {
     cityController.dispose();
     latitudeController.dispose();
     longitudeController.dispose();
+    postalCodeController.dispose();
     refillInfoController.dispose();
     openInfoController.dispose();
     idController.dispose();
@@ -1084,18 +1144,65 @@ class _BarFormDialogState extends State<_BarFormDialog> {
               _buildTextField(idController, 'ID Locale', 'Es: caffe-duomo'),
             _buildTextField(nameController, 'Nome', 'Es: Caffè del Duomo'),
             _buildAddressSearchField(),
-            _buildTextField(cityController, 'Città', 'Es: Terracina',
-                readOnly: true),
             _buildTextField(
-                latitudeController, 'Latitudine', 'Es: 41.2916360',
-                readOnly: true),
+              cityController,
+              'Città',
+              'Es: Terracina',
+              readOnly: true,
+            ),
             _buildTextField(
-                longitudeController, 'Longitudine', 'Es: 13.2485294',
-                readOnly: true),
-            _buildTextField(refillInfoController, 'Info Refill',
-                'Es: Refill verificato'),
+              latitudeController,
+              'Latitudine',
+              'Es: 41.2916360',
+              readOnly: true,
+            ),
             _buildTextField(
-                openInfoController, 'Orari', 'Es: Lun-Dom 07:00-23:30'),
+              longitudeController,
+              'Longitudine',
+              'Es: 13.2485294',
+              readOnly: true,
+            ),
+            _buildTextField(
+              postalCodeController,
+              'CAP',
+              'Es: 04019',
+              readOnly: true,
+            ),
+            _buildTextField(
+              refillInfoController,
+              'Info Refill',
+              'Es: Refill verificato',
+            ),
+            _buildTextField(
+              openInfoController,
+              'Orari',
+              'Es: Lun-Dom 07:00-23:30',
+            ),
+            if (services.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: services
+                      .map((service) => Chip(label: Text(service)))
+                      .toList(),
+                ),
+              ),
+            ],
+            if (socialLinks['website']?.isNotEmpty == true)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Sito web importato',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.all(12),
+                  ),
+                  child: SelectableText(socialLinks['website']!),
+                ),
+              ),
             const SizedBox(height: 16),
             CheckboxListTile(
               title: const Text('Featured'),
@@ -1112,9 +1219,7 @@ class _BarFormDialogState extends State<_BarFormDialog> {
         ),
         ElevatedButton(
           onPressed: _saveBar,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.ocean,
-          ),
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.ocean),
           child: const Text('Salva'),
         ),
       ],
@@ -1125,8 +1230,8 @@ class _BarFormDialogState extends State<_BarFormDialog> {
     TextEditingController controller,
     String label,
     String hint, {
-      bool readOnly = false,
-    }) {
+    bool readOnly = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
@@ -1151,8 +1256,9 @@ class _BarFormDialogState extends State<_BarFormDialog> {
           TextField(
             controller: addressController,
             decoration: InputDecoration(
-              labelText: 'Indirizzo',
-              hintText: 'Es: Via Roma 15 Fondi',
+              labelText: 'Cerca locale o indirizzo',
+              hintText: 'Es: Bar Centrale Fondi oppure Via Roma 15',
+              helperText: 'Seleziona un risultato per compilare la scheda.',
               border: const OutlineInputBorder(),
               contentPadding: const EdgeInsets.all(12),
               prefixIcon: const Icon(Icons.search),
@@ -1165,15 +1271,10 @@ class _BarFormDialogState extends State<_BarFormDialog> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     )
-                  : _selectedAddressResult != null
-                      ? const Icon(Icons.check_circle, color: AppColors.ocean)
-                      : IconButton(
-                          tooltip: 'Cerca indirizzo',
-                          icon: const Icon(Icons.search),
-                          onPressed: _runAddressSearchNow,
-                        ),
+                  : _selectedAddress != null
+                  ? const Icon(Icons.check_circle, color: AppColors.ocean)
+                  : null,
             ),
-            onSubmitted: (_) => _runAddressSearchNow(),
           ),
           if (_addressSearchError != null)
             Padding(
@@ -1194,25 +1295,33 @@ class _BarFormDialogState extends State<_BarFormDialog> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _addressResults.length,
-                separatorBuilder: (_, __) => Divider(
-                  height: 1,
-                  color: Colors.grey.shade300,
-                ),
+                separatorBuilder: (_, _) =>
+                    Divider(height: 1, color: Colors.grey.shade300),
                 itemBuilder: (context, index) {
                   final result = _addressResults[index];
                   return ListTile(
                     dense: true,
                     leading: const Icon(Icons.place, color: AppColors.ocean),
                     title: Text(result.label),
-                    subtitle: Text(
-                      '${result.latitude.toStringAsFixed(6)}, '
-                      '${result.longitude.toStringAsFixed(6)}',
-                    ),
+                    subtitle: Text(result.secondaryText),
                     onTap: () => _selectAddressResult(result),
                   );
                 },
               ),
             ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => launchUrl(
+                Uri.parse('https://www.geoapify.com/'),
+                mode: LaunchMode.externalApplication,
+              ),
+              child: const Text(
+                'Powered by Geoapify',
+                style: TextStyle(fontSize: 11),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1221,14 +1330,15 @@ class _BarFormDialogState extends State<_BarFormDialog> {
   void _onAddressChanged() {
     final query = addressController.text.trim();
 
-    if (_selectedAddressResult?.label == query) {
+    if (_selectedAddress?.formattedAddress == query) {
       return;
     }
 
-    _selectedAddressResult = null;
+    _selectedAddress = null;
     cityController.clear();
     latitudeController.clear();
     longitudeController.clear();
+    postalCodeController.clear();
 
     _addressSearchDebounce?.cancel();
     if (query.length < 4) {
@@ -1242,8 +1352,10 @@ class _BarFormDialogState extends State<_BarFormDialog> {
       return;
     }
 
-    _addressSearchDebounce =
-        Timer(_addressSearchDelay, () => _searchAddress(query));
+    _addressSearchDebounce = Timer(
+      _addressSearchDelay,
+      () => _searchAddress(query),
+    );
   }
 
   Future<void> _searchAddress(String query) async {
@@ -1255,22 +1367,18 @@ class _BarFormDialogState extends State<_BarFormDialog> {
     });
 
     try {
-      var results = <_AddressSearchResult>[];
-      try {
-        results = await _searchAddressWithNominatim(query);
-      } catch (_) {
-        results = [];
-      }
-      if (results.isEmpty) {
-        results = await _searchAddressWithPhoton(query);
-      }
+      final results = await _addressSearchService.autocomplete(
+        query: query,
+        sessionToken: _addressSessionToken,
+      );
 
       if (!mounted || addressController.text.trim() != query) return;
 
       setState(() {
         _addressResults = results;
-        _addressSearchError =
-            results.isEmpty ? 'Nessun indirizzo trovato.' : null;
+        _addressSearchError = results.isEmpty
+            ? 'Nessun indirizzo trovato.'
+            : null;
       });
     } catch (_) {
       if (!mounted) return;
@@ -1285,94 +1393,58 @@ class _BarFormDialogState extends State<_BarFormDialog> {
     }
   }
 
-  void _runAddressSearchNow() {
-    final query = addressController.text.trim();
+  Future<void> _selectAddressResult(AddressSuggestion result) async {
     _addressSearchDebounce?.cancel();
-
-    if (query.length < 4) {
-      setState(() {
-        _addressResults = [];
-        _addressSearchError = 'Inserisci almeno 4 caratteri.';
-      });
-      return;
-    }
-
-    _searchAddress(query);
-  }
-
-  Future<List<_AddressSearchResult>> _searchAddressWithNominatim(
-    String query,
-  ) async {
-    final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
-      'q': query,
-      'format': 'jsonv2',
-      'addressdetails': '1',
-      'limit': '5',
-      'countrycodes': 'it',
-      'accept-language': 'it',
-    });
-
-    final response = await http.get(uri, headers: {
-      'Accept': 'application/json',
-      'Accept-Language': 'it',
-      'User-Agent': 'FairWaterCRM/1.0 (admin address search)',
-    });
-
-    if (response.statusCode != 200) {
-      throw Exception('ricerca indirizzo non disponibile');
-    }
-
-    final decoded = jsonDecode(response.body) as List<dynamic>;
-    return decoded
-        .whereType<Map<String, dynamic>>()
-        .map(_AddressSearchResult.fromNominatim)
-        .whereType<_AddressSearchResult>()
-        .toList();
-  }
-
-  Future<List<_AddressSearchResult>> _searchAddressWithPhoton(
-    String query,
-  ) async {
-    final uri = Uri.https('photon.komoot.io', '/api/', {
-      'q': query,
-      'limit': '5',
-      'lang': 'it',
-    });
-
-    final response = await http.get(uri, headers: {
-      'Accept': 'application/json',
-      'Accept-Language': 'it',
-    });
-
-    if (response.statusCode != 200) {
-      throw Exception('ricerca indirizzo non disponibile');
-    }
-
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final features = decoded['features'] as List<dynamic>? ?? [];
-    return features
-        .whereType<Map<String, dynamic>>()
-        .map(_AddressSearchResult.fromPhoton)
-        .whereType<_AddressSearchResult>()
-        .toList();
-  }
-
-  void _selectAddressResult(_AddressSearchResult result) {
-    _addressSearchDebounce?.cancel();
-    addressController
-      ..removeListener(_onAddressChanged)
-      ..text = result.label
-      ..selection = TextSelection.collapsed(offset: result.label.length)
-      ..addListener(_onAddressChanged);
-
     setState(() {
-      _selectedAddressResult = result;
       _addressResults = [];
       _addressSearchError = null;
-      cityController.text = result.city;
-      latitudeController.text = result.latitude.toStringAsFixed(7);
-      longitudeController.text = result.longitude.toStringAsFixed(7);
+      _isSearchingAddress = true;
     });
+
+    try {
+      final details = await _addressSearchService.details(
+        placeId: result.placeId,
+        sessionToken: _addressSessionToken,
+      );
+      if (!mounted) return;
+      addressController
+        ..removeListener(_onAddressChanged)
+        ..text = details.formattedAddress
+        ..selection = TextSelection.collapsed(
+          offset: details.formattedAddress.length,
+        )
+        ..addListener(_onAddressChanged);
+
+      setState(() {
+        _selectedAddress = details;
+        if (details.name.isNotEmpty) {
+          nameController.text = details.name;
+          if (widget.initialBar == null) {
+            idController.text = _slugify(details.name);
+          }
+        }
+        cityController.text = details.city;
+        postalCodeController.text = details.postalCode;
+        latitudeController.text = details.latitude.toStringAsFixed(7);
+        longitudeController.text = details.longitude.toStringAsFixed(7);
+        if (details.openingHours.isNotEmpty) {
+          openInfoController.text = details.openingHours;
+        }
+        services = {...services, ...details.services}.toList();
+        if (details.website.isNotEmpty) {
+          socialLinks['website'] = details.website;
+        }
+        _addressSessionToken = _newAddressSessionToken();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _addressSearchError =
+            'Impossibile recuperare i dettagli dell indirizzo.';
+      });
+    } finally {
+      if (mounted) setState(() => _isSearchingAddress = false);
+    }
   }
 
   void _saveBar() {
@@ -1387,7 +1459,7 @@ class _BarFormDialogState extends State<_BarFormDialog> {
       final address = addressController.text.trim();
       final isExistingAddress =
           widget.initialBar != null && widget.initialBar?.address == address;
-      if (_selectedAddressResult == null && !isExistingAddress) {
+      if (_selectedAddress == null && !isExistingAddress) {
         throw Exception('seleziona un indirizzo dai risultati di ricerca');
       }
 
@@ -1403,136 +1475,47 @@ class _BarFormDialogState extends State<_BarFormDialog> {
         refillInfo: refillInfoController.text.trim(),
         openInfo: openInfoController.text.trim(),
         services: services,
-        socialLinks: widget.initialBar?.socialLinks ?? {},
+        socialLinks: socialLinks,
         galleryImages: widget.initialBar?.galleryImages ?? [],
         featured: featured,
+        postalCode:
+            _selectedAddress?.postalCode ?? widget.initialBar?.postalCode ?? '',
+        googlePlaceId:
+            _selectedAddress?.placeId ?? widget.initialBar?.googlePlaceId ?? '',
       );
 
       widget.onSave(bar);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Errore: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Errore: $e')));
     }
   }
 }
 
-class _AddressSearchResult {
-  final String label;
-  final String city;
-  final double latitude;
-  final double longitude;
-
-  const _AddressSearchResult({
-    required this.label,
-    required this.city,
-    required this.latitude,
-    required this.longitude,
-  });
-
-  static _AddressSearchResult? fromNominatim(Map<String, dynamic> json) {
-    final label = (json['display_name'] as String? ?? '').trim();
-    final latitude = double.tryParse(json['lat'] as String? ?? '');
-    final longitude = double.tryParse(json['lon'] as String? ?? '');
-    final address = json['address'] as Map<String, dynamic>? ?? {};
-    final city = _firstAddressValue(address, const [
-      'city',
-      'town',
-      'village',
-      'municipality',
-      'county',
-    ]);
-
-    if (label.isEmpty || latitude == null || longitude == null) {
-      return null;
-    }
-
-    return _AddressSearchResult(
-      label: label,
-      city: city,
-      latitude: latitude,
-      longitude: longitude,
-    );
+String _slugify(String value) {
+  const accented = 'àáâäãåèéêëìíîïòóôöõùúûüçñ';
+  const plain = 'aaaaaaeeeeiiiiooooouuuucn';
+  var normalized = value.toLowerCase();
+  for (var index = 0; index < accented.length; index++) {
+    normalized = normalized.replaceAll(accented[index], plain[index]);
   }
+  return normalized
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
+}
 
-  static _AddressSearchResult? fromPhoton(Map<String, dynamic> json) {
-    final geometry = json['geometry'] as Map<String, dynamic>? ?? {};
-    final properties = json['properties'] as Map<String, dynamic>? ?? {};
-    final coordinates = geometry['coordinates'] as List<dynamic>? ?? [];
-
-    if (coordinates.length < 2) {
-      return null;
-    }
-
-    final longitude = (coordinates[0] as num?)?.toDouble();
-    final latitude = (coordinates[1] as num?)?.toDouble();
-    final city = _firstAddressValue(properties, const [
-      'city',
-      'town',
-      'village',
-      'municipality',
-      'county',
-      'state',
-    ]);
-    final label = _buildPhotonLabel(properties, city);
-
-    if (label.isEmpty || latitude == null || longitude == null) {
-      return null;
-    }
-
-    return _AddressSearchResult(
-      label: label,
-      city: city,
-      latitude: latitude,
-      longitude: longitude,
-    );
-  }
-
-  static String _buildPhotonLabel(
-    Map<String, dynamic> properties,
-    String city,
-  ) {
-    final name = (properties['name'] as String? ?? '').trim();
-    final street = (properties['street'] as String? ?? '').trim();
-    final houseNumber = (properties['housenumber'] as String? ?? '').trim();
-    final postcode = (properties['postcode'] as String? ?? '').trim();
-    final country = (properties['country'] as String? ?? '').trim();
-    final streetLine = [
-      if (street.isNotEmpty) street,
-      if (houseNumber.isNotEmpty) houseNumber,
-    ].join(' ');
-    final parts = [
-      if (streetLine.isNotEmpty) streetLine else if (name.isNotEmpty) name,
-      if (postcode.isNotEmpty) postcode,
-      if (city.isNotEmpty) city,
-      if (country.isNotEmpty) country,
-    ];
-
-    return parts.join(', ');
-  }
-
-  static String _firstAddressValue(
-    Map<String, dynamic> address,
-    List<String> keys,
-  ) {
-    for (final key in keys) {
-      final value = (address[key] as String? ?? '').trim();
-      if (value.isNotEmpty) {
-        return value;
-      }
-    }
-    return '';
-  }
+String _newAddressSessionToken() {
+  final random = Random.secure();
+  final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+  return bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
 }
 
 class _SponsorFormDialog extends StatefulWidget {
   final SponsorSpot? initialSponsor;
   final Function(SponsorSpot) onSave;
 
-  const _SponsorFormDialog({
-    this.initialSponsor,
-    required this.onSave,
-  });
+  const _SponsorFormDialog({this.initialSponsor, required this.onSave});
 
   @override
   State<_SponsorFormDialog> createState() => _SponsorFormDialogState();
@@ -1557,8 +1540,12 @@ class _SponsorFormDialogState extends State<_SponsorFormDialog> {
     nameController = TextEditingController(text: sponsor?.name ?? '');
     categoryController = TextEditingController(text: sponsor?.category ?? '');
     addressController = TextEditingController(text: sponsor?.address ?? '');
-    contributionController = TextEditingController(text: sponsor?.contribution ?? '');
-    thankYouMessageController = TextEditingController(text: sponsor?.thankYouMessage ?? '');
+    contributionController = TextEditingController(
+      text: sponsor?.contribution ?? '',
+    );
+    thankYouMessageController = TextEditingController(
+      text: sponsor?.thankYouMessage ?? '',
+    );
     featured = sponsor?.featured ?? false;
   }
 
@@ -1587,9 +1574,22 @@ class _SponsorFormDialogState extends State<_SponsorFormDialog> {
               _buildTextField(idController, 'ID Sponsor', 'Es: emporio-corso'),
             _buildTextField(nameController, 'Nome', 'Es: Emporio del Corso'),
             _buildTextField(categoryController, 'Categoria', 'Es: Market'),
-            _buildTextField(addressController, 'Indirizzo', 'Es: Corso Italia 18'),
-            _buildTextField(contributionController, 'Contributo', 'Es: Supporto materiali'),
-            _buildTextField(thankYouMessageController, 'Messaggio di Ringraziamento', 'Es: Grazie per il supporto', maxLines: 3),
+            _buildTextField(
+              addressController,
+              'Indirizzo',
+              'Es: Corso Italia 18',
+            ),
+            _buildTextField(
+              contributionController,
+              'Contributo',
+              'Es: Supporto materiali',
+            ),
+            _buildTextField(
+              thankYouMessageController,
+              'Messaggio di Ringraziamento',
+              'Es: Grazie per il supporto',
+              maxLines: 3,
+            ),
             const SizedBox(height: 16),
             CheckboxListTile(
               title: const Text('Featured'),
@@ -1606,9 +1606,7 @@ class _SponsorFormDialogState extends State<_SponsorFormDialog> {
         ),
         ElevatedButton(
           onPressed: _saveSponsor,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.ocean,
-          ),
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.ocean),
           child: const Text('Salva'),
         ),
       ],
@@ -1638,7 +1636,8 @@ class _SponsorFormDialogState extends State<_SponsorFormDialog> {
 
   void _saveSponsor() {
     try {
-      final id = widget.initialSponsor?.id ?? idController.text.toLowerCase().trim();
+      final id =
+          widget.initialSponsor?.id ?? idController.text.toLowerCase().trim();
 
       if (id.isEmpty) {
         throw Exception('ID sponsor è obbligatorio');
@@ -1658,9 +1657,9 @@ class _SponsorFormDialogState extends State<_SponsorFormDialog> {
 
       widget.onSave(sponsor);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Errore: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Errore: $e')));
     }
   }
 }

@@ -7,23 +7,26 @@ import 'screens/admin_dashboard_page.dart';
 import 'screens/admin_login_page.dart';
 import 'screens/home_page.dart';
 import 'screens/login_page.dart';
+import 'screens/onboarding_page.dart';
 import 'services/admin_service.dart';
 import 'services/auth_service.dart';
 import 'services/biometric_auth_service.dart';
 import 'services/login_preferences_service.dart';
+import 'services/onboarding_service.dart';
 import 'services/refill_notification_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
     // Inizializza notifiche solo su mobile/desktop, non su web
     if (!kIsWeb) {
       await RefillNotificationService.instance.initialize();
     }
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
     runApp(const MyApp());
   } catch (e) {
     runApp(_BootstrapErrorApp(message: e.toString()));
@@ -45,13 +48,21 @@ class MyApp extends StatelessWidget {
         '/admin-dashboard': (context) => const AdminDashboardPage(),
         '/home': (context) => const HomePage(),
         '/login': (context) => const LoginPage(),
+        '/onboarding': (context) => const OnboardingPage(),
       },
     );
   }
 }
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  bool _onboardingCompletedInSession = false;
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +127,22 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        return const LoginPage();
+        return FutureBuilder<bool>(
+          future: OnboardingService().isCompleted(),
+          builder: (context, onboardingSnapshot) {
+            if (onboardingSnapshot.connectionState == ConnectionState.waiting) {
+              return const _LoadingScreen();
+            }
+            return onboardingSnapshot.data == true ||
+                    _onboardingCompletedInSession
+                ? const LoginPage()
+                : OnboardingPage(
+                    onExistingAccount: () => setState(
+                      () => _onboardingCompletedInSession = true,
+                    ),
+                  );
+          },
+        );
       },
     );
   }
