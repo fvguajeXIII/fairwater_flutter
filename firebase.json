@@ -45,7 +45,7 @@
     },
     {
       "target": "admin",
-      "public": "build/web",
+      "public": "admin_crm/dist",
       "ignore": [
         "firebase.json",
         "**/.*",
