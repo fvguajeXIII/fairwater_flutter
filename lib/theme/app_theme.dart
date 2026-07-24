@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color deepOcean = Color(0xFF0E5E78);
-  static const Color ocean = Color(0xFF1696B5);
-  static const Color aqua = Color(0xFF69D5E7);
-  static const Color mist = Color(0xFFEAFBFF);
-  static const Color foam = Color(0xFFF6FDFF);
-  static const Color ink = Color(0xFF123847);
-  static const Color slate = Color(0xFF5F7C88);
+  static const Color deepOcean = Color(0xFF195BAA);
+  static const Color ocean = Color(0xFF2D7FE0);
+  static const Color aqua = Color(0xFF6FB4FF);
+  static const Color mist = Color(0xFFEAF3FF);
+  static const Color foam = Color(0xFFF7FAFF);
+  static const Color ink = Color(0xFF15324F);
+  static const Color slate = Color(0xFF5D7188);
   static const Color success = Color(0xFF1D9A67);
-  static const Color border = Color(0xFFD7EAF1);
-  static const Color borderStrong = Color(0xFFBFDCE6);
-  static const Color iconMuted = Color(0xFF7E9AA5);
-  static const Color line = Color(0xFFE4F0F4);
-  static const Color surfaceAlt = Color(0xFFEAFBFF);
-  static const Color surfaceMuted = Color(0xFFF0F8FB);
+  static const Color border = Color(0xFFD8E6F7);
+  static const Color borderStrong = Color(0xFFBCD3EF);
+  static const Color iconMuted = Color(0xFF7D91A9);
+  static const Color line = Color(0xFFE5EDF7);
+  static const Color surfaceAlt = Color(0xFFEAF3FF);
+  static const Color surfaceMuted = Color(0xFFF1F6FC);
 }
 
 class AppTheme {
@@ -95,7 +95,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.deepOcean,
-          side: const BorderSide(color: Color(0xFFD5EBF1)),
+          side: const BorderSide(color: AppColors.border),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -106,18 +106,18 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF91AAB4)),
+        hintStyle: const TextStyle(fontSize: 14, color: AppColors.iconMuted),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Color(0xFFD7EAF1)),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: Color(0xFFD7EAF1)),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
@@ -150,7 +150,7 @@ class AppDecorations {
   static const LinearGradient shellGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFF4FDFF), Color(0xFFE5F8FD), Color(0xFFF8FDFF)],
+    colors: [Color(0xFFF7FAFF), Color(0xFFEAF3FF), Color(0xFFFAFCFF)],
   );
 
   static const LinearGradient heroGradient = LinearGradient(

@@ -5,6 +5,11 @@ import 'package:fairwater/screens/login_page.dart';
 import 'package:fairwater/theme/app_theme.dart';
 
 void main() {
+  test('Theme uses the FairWater identity color', () {
+    expect(AppColors.ocean, const Color(0xFF2D7FE0));
+    expect(AppTheme.light.colorScheme.primary, const Color(0xFF2D7FE0));
+  });
+
   testWidgets('Login page renders primary entry points', (
     WidgetTester tester,
   ) async {

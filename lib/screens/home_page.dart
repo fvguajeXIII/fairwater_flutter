@@ -26,84 +26,6 @@ const String _kGeoapifyTileUrl =
     'https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey={apiKey}';
 const String _kOpenStreetMapTileUrl =
     'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const List<SponsorSpot> _kSampleSponsors = [
-  SponsorSpot(
-    id: 'emporio-del-corso',
-    name: 'Emporio del Corso',
-    category: 'Market di quartiere',
-    address: 'Corso Italia 18, Fondi',
-    contribution: 'Supporto logistico e materiali per gli eventi.',
-    thankYouMessage:
-        'Grazie per aver creduto nel progetto fin dal primo momento e per averci aiutato a coinvolgere il quartiere.',
-    supports: ['Eventi locali', 'Materiali', 'Presenza sul territorio'],
-    socialLinks: {
-      'instagram': 'https://www.instagram.com/emporiodelcorso',
-      'facebook': 'https://www.facebook.com/emporiodelcorso',
-    },
-    featured: true,
-  ),
-  SponsorSpot(
-    id: 'pasticceria-la-portella',
-    name: 'Pasticceria La Portella',
-    category: 'Pasticceria artigianale',
-    address: 'Via Roma 42, Fondi',
-    contribution: 'Accoglienza durante presentazioni e giornate divulgative.',
-    thankYouMessage:
-        'Il vostro contributo ha reso gli incontri con la comunita piu calorosi, accessibili e partecipati.',
-    supports: ['Accoglienza', 'Degustazioni', 'Eventi'],
-    socialLinks: {
-      'instagram': 'https://www.instagram.com/pasticcerialaportella',
-      'website': 'https://www.pasticcerialaportella.it',
-    },
-    featured: false,
-  ),
-  SponsorSpot(
-    id: 'cartolibreria-aurora',
-    name: 'Cartolibreria Aurora',
-    category: 'Cartoleria e libreria',
-    address: 'Viale Vittorio Emanuele III 7, Fondi',
-    contribution: 'Stampa di materiali informativi e supporti promozionali.',
-    thankYouMessage:
-        'Grazie per averci aiutato a raccontare il progetto con materiali chiari, curati e sempre disponibili.',
-    supports: ['Volantini', 'Locandine', 'Comunicazione'],
-    socialLinks: {
-      'facebook': 'https://www.facebook.com/cartolibreriaaurora',
-      'instagram': 'https://www.instagram.com/cartolibreriaaurora',
-    },
-    featured: false,
-  ),
-  SponsorSpot(
-    id: 'officina-verde',
-    name: 'Officina Verde',
-    category: 'Mobilita sostenibile',
-    address: 'Via Appia Lato Roma 95, Fondi',
-    contribution:
-        'Supporto tecnico per iniziative legate a mobilita e territorio.',
-    thankYouMessage:
-        'La vostra sensibilita verso il territorio ha dato forza concreta alla visione del progetto.',
-    supports: ['Territorio', 'Tecnica', 'Sostenibilita'],
-    socialLinks: {
-      'instagram': 'https://www.instagram.com/officinaverdefondi',
-      'website': 'https://www.officinaverdefondi.it',
-    },
-    featured: false,
-  ),
-  SponsorSpot(
-    id: 'erboristeria-san-magno',
-    name: 'Erboristeria San Magno',
-    category: 'Benessere e prodotti naturali',
-    address: 'Piazza Unita d Italia 11, Fondi',
-    contribution: 'Sostegno economico e visibilita alle attivita di lancio.',
-    thankYouMessage:
-        'Grazie per il sostegno ricevuto: il vostro aiuto ha contribuito davvero alla realizzazione del progetto.',
-    supports: ['Sponsorizzazione', 'Benessere', 'Community'],
-    socialLinks: {
-      'instagram': 'https://www.instagram.com/erboristeriasanmagno',
-      'facebook': 'https://www.facebook.com/erboristeriasanmagno',
-    },
-    featured: false,
-  ),
-];
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -120,6 +42,8 @@ class _HomePageState extends State<HomePage> {
   final MapController _mapController = MapController();
   final RefillNotificationService _refillNotificationService =
       RefillNotificationService.instance;
+  late final Stream<List<BarSpot>> _barsStream;
+  late final Stream<List<SponsorSpot>> _sponsorsStream;
 
   int _selectedIndex = 0;
   Position? _position;
@@ -127,7 +51,6 @@ class _HomePageState extends State<HomePage> {
   bool _loadingLocation = true;
   bool _mapReady = false;
   LatLng? _pendingMapCenter;
-  bool _seedingBars = false;
   StreamSubscription<Position>? _positionSubscription;
   int? _lastObservedRefillCount;
   bool _customerInitialized = false;
@@ -135,27 +58,14 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _barsStream = _barService.watchBars();
+    _sponsorsStream = _sponsorService.watchSponsors();
   }
 
   @override
   void dispose() {
     _positionSubscription?.cancel();
     super.dispose();
-  }
-
-  Future<void> _seedBarsIfNeeded() async {
-    if (_seedingBars) {
-      return;
-    }
-
-    _seedingBars = true;
-    try {
-      await _barService.ensureSeedData();
-    } catch (_) {
-      // If Firestore rules block writes, the live stream can still render data.
-    } finally {
-      _seedingBars = false;
-    }
   }
 
   Future<void> _loadLocation() async {
@@ -309,7 +219,6 @@ class _HomePageState extends State<HomePage> {
           _customerInitialized = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-            _seedBarsIfNeeded();
             _loadLocation();
           });
         }
@@ -358,7 +267,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHomeTab() {
     return StreamBuilder<List<BarSpot>>(
-      stream: _barService.watchBars(),
+      stream: _barsStream,
       builder: (context, snapshot) {
         final bars = snapshot.data ?? const <BarSpot>[];
         final nearbyBars = _nearbyBars(bars);
@@ -455,7 +364,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildRefillTab() {
     return StreamBuilder<List<BarSpot>>(
-      stream: _barService.watchBars(),
+      stream: _barsStream,
       builder: (context, snapshot) {
         final bars = <BarSpot>[...?snapshot.data]
           ..sort((a, b) {
@@ -500,30 +409,41 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildSponsorTab() {
     return StreamBuilder<List<SponsorSpot>>(
-      stream: _sponsorService.watchSponsors(),
+      stream: _sponsorsStream,
       builder: (context, snapshot) {
-        final firestoreSponsors = snapshot.data ?? const <SponsorSpot>[];
-        final sponsors = firestoreSponsors.isNotEmpty
-            ? firestoreSponsors
-            : _kSampleSponsors;
+        final sponsors = <SponsorSpot>[...?snapshot.data]
+          ..sort((a, b) {
+            if (a.featured != b.featured) {
+              return a.featured ? -1 : 1;
+            }
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          });
 
         return WaterBackdrop(
           child: SafeArea(
             bottom: false,
             child: CustomScrollView(
               slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      if (index.isOdd) {
-                        return const SizedBox(height: 14);
-                      }
-                      final sponsor = sponsors[index ~/ 2];
-                      return _SponsorCard(sponsor: sponsor);
-                    }, childCount: sponsors.length * 2 - 1),
+                if (sponsors.isEmpty)
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(20, 14, 20, 120),
+                      child: _EmptySponsorsCard(),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        if (index.isOdd) {
+                          return const SizedBox(height: 14);
+                        }
+                        final sponsor = sponsors[index ~/ 2];
+                        return _SponsorCard(sponsor: sponsor);
+                      }, childCount: sponsors.length * 2 - 1),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -1468,6 +1388,40 @@ class _EmptyRefillCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Quando i locali saranno attivi, qui compariranno schede con orari, servizi e link social.',
+            style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.slate),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptySponsorsCard extends StatelessWidget {
+  const _EmptySponsorsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Nessuno sponsor disponibile per ora.',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Gli sponsor pubblicati dal CRM compariranno qui automaticamente.',
             style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.slate),
           ),
         ],

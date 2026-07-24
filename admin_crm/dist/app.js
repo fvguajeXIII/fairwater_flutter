@@ -12,13 +12,11 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs,
   getFirestore,
   onSnapshot,
   serverTimestamp,
   setDoc,
   updateDoc,
-  writeBatch,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getFunctions,
@@ -71,115 +69,6 @@ const snapshotUnsubscribers = {
   bars: null,
   sponsors: null,
 };
-
-const appSeedBars = [
-  ["caffe-del-duomo", "Caffe del Duomo", "Piazza Municipio 18", "Terracina", 41.291636, 13.2485294, "Refill verificato", "Lun-Dom 07:00-23:30", ["Acqua fresca", "Bottle refill", "Tavoli esterni"], true],
-  ["bar-grande", "Bar Grande", "Piazza Municipio 12", "Terracina", 41.2915161, 13.2490918, "Punto refill", "Lun-Sab 06:30-22:30", ["Refill rapido", "Caffetteria", "Snack"], false],
-  ["ready-steady-go", "Ready Steady Go!", "Via Salita Annunziata 17", "Terracina", 41.291187, 13.2496871, "Punto refill", "Mar-Dom 08:00-00:00", ["Refill water", "Brunch", "Wi-Fi"], false],
-  ["artis-cafe", "Artis Cafe", "Piazza Garibaldi 3;5", "Terracina", 41.2882868, 13.2534868, "Punto refill", "Lun-Dom 07:00-20:30", ["Acqua filtrata", "Dolci", "Posti a sedere"], false],
-  ["caffetteria-bar-quadrifoglio", "Caffetteria Bar Quadrifoglio", "Viale della Vittoria 59", "Terracina", 41.2855149, 13.2480586, "Punto refill", "Mo-Su 07:30-02:00", ["Refill bottle", "Cocktail", "Dehors"], false],
-  ["caffe-del-viale", "Caffe del viale", "Viale della Vittoria 17", "Terracina", 41.2882055, 13.2499981, "Punto refill", "Lun-Sab 06:30-21:30", ["Acqua fresca", "Colazioni", "Take away"], false],
-  ["colorado-caffe", "Colorado Cafe", "Piazza Garibaldi 21", "Terracina", 41.2884611, 13.2524521, "Punto refill", "Lun-Dom 07:00-01:00", ["Refill", "Aperitivi", "Outdoor seating"], false],
-  ["bar-roma", "Bar Roma", "Via Roma 72", "Terracina", 41.2892293, 13.2513132, "Punto refill", "Lun-Dom 05:30-23:00", ["Acqua refrigerata", "Caffetteria", "Accessibile"], false],
-  ["bar-traiano", "Bar Traiano", "Terracina", "Terracina", 41.2865912, 13.2532889, "Punto refill", "Lun-Sab 07:00-22:00", ["Refill acqua", "Snack veloci", "Tavoli interni"], false],
-  ["bar-milano", "Bar Milano", "Piazzale Lido 20", "Terracina", 41.2845739, 13.2469707, "Punto refill", "Mo-Su 07:30-02:00", ["Refill gratuito", "Lounge", "Vista mare"], false],
-  ["caffe-del-corso-fondi", "Caffe del Corso", "Corso Appio Claudio 44", "Fondi", 41.357925, 13.425316, "Punto refill", "Lun-Dom 07:00-22:30", ["Refill acqua", "Colazioni", "Tavoli interni"], true],
-  ["bar-san-pietro-fondi", "Bar San Pietro", "Via San Pietro 12", "Fondi", 41.356812, 13.427144, "Punto refill", "Lun-Sab 06:30-21:30", ["Refill rapido", "Caffetteria", "Snack"], false],
-  ["bistrot-castello-fondi", "Bistrot Castello", "Piazza Unita d Italia 6", "Fondi", 41.355744, 13.428066, "Punto refill", "Mar-Dom 08:00-23:00", ["Refill bottle", "Brunch", "Wi-Fi"], false],
-  ["gran-caffe-baronale-fondi", "Gran Caffe Baronale", "Via Baronale 21", "Fondi", 41.354968, 13.429552, "Punto refill", "Lun-Dom 07:00-00:00", ["Acqua fresca", "Aperitivi", "Dehors"], false],
-  ["lido-urban-cafe-fondi", "Lido Urban Cafe", "Viale Vittorio Emanuele III 18", "Fondi", 41.358511, 13.431189, "Punto refill", "Lun-Sab 07:30-22:00", ["Refill gratuito", "Take away", "Posti a sedere"], false],
-  ["caffetteria-porta-romana-fondi", "Caffetteria Porta Romana", "Via Roma 83", "Fondi", 41.353922, 13.432701, "Punto refill", "Lun-Dom 06:30-21:00", ["Acqua refrigerata", "Dolci", "Accessibile"], false],
-  ["vittoria-lounge-fondi", "Vittoria Lounge", "Viale Regina Margherita 10", "Fondi", 41.359674, 13.423981, "Punto refill", "Lun-Dom 08:00-01:00", ["Refill water", "Cocktail", "Outdoor seating"], false],
-  ["piazza-cafe-fondi", "Piazza Cafe", "Piazza Alcide De Gasperi 5", "Fondi", 41.361102, 13.427852, "Punto refill", "Lun-Sab 07:00-20:30", ["Refill acqua", "Panini", "Tavoli esterni"], false],
-  ["dolce-pausa-fondi", "Dolce Pausa", "Via Arnale Rosso 14", "Fondi", 41.355286, 13.423944, "Punto refill", "Mar-Dom 07:30-22:30", ["Refill bottle", "Pasticceria", "Wi-Fi"], false],
-  ["le-cinema-sant-anastasia", "Le Cinema", "Via Roma 343", "Sant Anastasia", 40.867761, 14.402595, "Punto refill", "Lun-Dom 16:30-00:30", ["Refill acqua", "Area relax", "Snack bar"], false],
-].map(([id, name, address, city, latitude, longitude, refillInfo, openInfo, services, featured]) => ({
-  id,
-  name,
-  address,
-  city,
-  latitude,
-  longitude,
-  refillInfo,
-  openInfo,
-  services,
-  socialLinks: buildDefaultSocialLinks(id),
-  galleryImages: buildGallery(id),
-  featured,
-}));
-
-const appSeedSponsors = [
-  {
-    id: "emporio-del-corso",
-    name: "Emporio del Corso",
-    category: "Market di quartiere",
-    address: "Corso Italia 18, Fondi",
-    contribution: "Supporto logistico e materiali per gli eventi.",
-    thankYouMessage: "Grazie per aver creduto nel progetto fin dal primo momento e per averci aiutato a coinvolgere il quartiere.",
-    supports: ["Eventi locali", "Materiali", "Presenza sul territorio"],
-    socialLinks: {
-      instagram: "https://www.instagram.com/emporiodelcorso",
-      facebook: "https://www.facebook.com/emporiodelcorso",
-    },
-    featured: true,
-  },
-  {
-    id: "pasticceria-la-portella",
-    name: "Pasticceria La Portella",
-    category: "Pasticceria artigianale",
-    address: "Via Roma 42, Fondi",
-    contribution: "Accoglienza durante presentazioni e giornate divulgative.",
-    thankYouMessage: "Il vostro contributo ha reso gli incontri con la comunita piu calorosi, accessibili e partecipati.",
-    supports: ["Accoglienza", "Degustazioni", "Eventi"],
-    socialLinks: {
-      instagram: "https://www.instagram.com/pasticcerialaportella",
-      website: "https://www.pasticcerialaportella.it",
-    },
-    featured: false,
-  },
-  {
-    id: "cartolibreria-aurora",
-    name: "Cartolibreria Aurora",
-    category: "Cartoleria e libreria",
-    address: "Viale Vittorio Emanuele III 7, Fondi",
-    contribution: "Stampa di materiali informativi e supporti promozionali.",
-    thankYouMessage: "Grazie per averci aiutato a raccontare il progetto con materiali chiari, curati e sempre disponibili.",
-    supports: ["Volantini", "Locandine", "Comunicazione"],
-    socialLinks: {
-      facebook: "https://www.facebook.com/cartolibreriaaurora",
-      instagram: "https://www.instagram.com/cartolibreriaaurora",
-    },
-    featured: false,
-  },
-  {
-    id: "officina-verde",
-    name: "Officina Verde",
-    category: "Mobilita sostenibile",
-    address: "Via Appia Lato Roma 95, Fondi",
-    contribution: "Supporto tecnico per iniziative legate a mobilita e territorio.",
-    thankYouMessage: "La vostra sensibilita verso il territorio ha dato forza concreta alla visione del progetto.",
-    supports: ["Territorio", "Tecnica", "Sostenibilita"],
-    socialLinks: {
-      instagram: "https://www.instagram.com/officinaverdefondi",
-      website: "https://www.officinaverdefondi.it",
-    },
-    featured: false,
-  },
-  {
-    id: "erboristeria-san-magno",
-    name: "Erboristeria San Magno",
-    category: "Benessere e prodotti naturali",
-    address: "Piazza Unita d Italia 11, Fondi",
-    contribution: "Sostegno economico e visibilita alle attivita di lancio.",
-    thankYouMessage: "Grazie per il sostegno ricevuto: il vostro aiuto ha contribuito davvero alla realizzazione del progetto.",
-    supports: ["Sponsorizzazione", "Benessere", "Community"],
-    socialLinks: {
-      instagram: "https://www.instagram.com/erboristeriasanmagno",
-      facebook: "https://www.facebook.com/erboristeriasanmagno",
-    },
-    featured: false,
-  },
-];
 
 const links = Array.from(document.querySelectorAll(".nav-link"));
 const panels = Array.from(document.querySelectorAll(".view"));
@@ -332,20 +221,6 @@ function buildGallery(seed) {
   return Array.from({ length: 4 }, (_, index) => {
     return `https://picsum.photos/seed/${seed}-${index + 1}/1200/900`;
   });
-}
-
-function buildDefaultSocialLinks(seed) {
-  const slug = String(seed ?? "").replace(/-/g, "");
-  const socialLinks = {
-    instagram: `https://instagram.com/${slug}`,
-    facebook: `https://facebook.com/${slug}`,
-  };
-
-  if (seed === "le-cinema-sant-anastasia") {
-    socialLinks.website = "https://lecinema.it";
-  }
-
-  return socialLinks;
 }
 
 function fullName(user) {
@@ -1028,110 +903,6 @@ async function handleSponsorUpdate(event) {
   }
 }
 
-async function ensureAppSeedBars() {
-  const snapshot = await getDocs(collection(db, "bars"));
-  const existingDocs = new Map(
-    snapshot.docs.map((entry) => [entry.id, entry.data()])
-  );
-  const batch = writeBatch(db);
-  let writes = 0;
-
-  for (const bar of appSeedBars) {
-    const barRef = doc(db, "bars", bar.id);
-    const existing = existingDocs.get(bar.id);
-
-    if (!existing) {
-      batch.set(barRef, {
-        ...bar,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      writes += 1;
-      continue;
-    }
-
-    const patch = {};
-    if (!safeText(existing.openInfo) || existing.openInfo === "OSM") {
-      patch.openInfo = bar.openInfo;
-    }
-    if (!Array.isArray(existing.services) || existing.services.length === 0) {
-      patch.services = bar.services;
-    }
-    if (!existing.socialLinks || !Object.keys(existing.socialLinks).length) {
-      patch.socialLinks = bar.socialLinks;
-    }
-    if (!Array.isArray(existing.galleryImages) || existing.galleryImages.length < 4) {
-      patch.galleryImages = bar.galleryImages;
-    }
-
-    if (Object.keys(patch).length) {
-      batch.set(barRef, {
-        ...patch,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-      writes += 1;
-    }
-  }
-
-  if (writes > 0) {
-    await batch.commit();
-  }
-}
-
-async function ensureAppSeedSponsors() {
-  const snapshot = await getDocs(collection(db, "sponsors"));
-  const existingDocs = new Map(
-    snapshot.docs.map((entry) => [entry.id, entry.data()])
-  );
-  const batch = writeBatch(db);
-  let writes = 0;
-
-  for (const sponsor of appSeedSponsors) {
-    const sponsorRef = doc(db, "sponsors", sponsor.id);
-    const existing = existingDocs.get(sponsor.id);
-
-    if (!existing) {
-      batch.set(sponsorRef, {
-        ...sponsor,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      writes += 1;
-      continue;
-    }
-
-    const patch = {};
-    for (const key of [
-      "category",
-      "address",
-      "contribution",
-      "thankYouMessage",
-    ]) {
-      if (!safeText(existing[key])) {
-        patch[key] = sponsor[key];
-      }
-    }
-    if (!Array.isArray(existing.supports) || existing.supports.length === 0) {
-      patch.supports = sponsor.supports;
-    }
-    if (!existing.socialLinks || !Object.keys(existing.socialLinks).length) {
-      patch.socialLinks = sponsor.socialLinks;
-    }
-
-    if (Object.keys(patch).length) {
-      batch.set(sponsorRef, {
-        ...patch,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-      writes += 1;
-    }
-  }
-
-  if (writes > 0) {
-    await batch.commit();
-  }
-}
-
 function bindSnapshot(collectionName, stateKey, renderFn, database = db) {
   stopSnapshot(stateKey);
   const unsubscribe = onSnapshot(
@@ -1212,20 +983,8 @@ async function startDataSync(user) {
     );
   }
 
-  try {
-    await ensureAppSeedBars();
-    appendStatus("Punti refill dell'app verificati su Firestore.", "success");
-  } catch (error) {
-    appendStatus(`Errore sincronizzazione punti refill: ${error.message}`, "error");
-  }
-
-  try {
-    await ensureAppSeedSponsors();
-    appendStatus("Sponsor dell'app verificati su Firestore.", "success");
-  } catch (error) {
-    appendStatus(`Errore sincronizzazione sponsor: ${error.message}`, "error");
-  }
-
+  // Firestore is the only source of truth. Loading the CRM must never recreate
+  // deleted demo records; the live listeners below mirror every CRUD change.
   bindSnapshot("bars", "bars", renderBars);
   bindSnapshot("sponsors", "sponsors", renderSponsors);
   if (!(await unlockUsersWithSavedFirebaseAdmin())) {
