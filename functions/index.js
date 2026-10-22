@@ -202,9 +202,20 @@ exports.recordCustomerRefill = onCall({region}, async (request) => {
 exports.createManagedUser = onCall({region}, async (request) => {
   await requireAdmin(request);
   const role = String(request.data?.role || "customer").trim();
-  const allowedRoles = new Set(["customer", "refill_manager", "sponsor_manager"]);
+  const allowedRoles = new Set([
+    "customer", "refill_manager", "sponsor_manager", "admin", "super_admin",
+  ]);
   if (!allowedRoles.has(role)) {
     throw new HttpsError("invalid-argument", "Ruolo non valido.");
+  }
+  if (["admin", "super_admin"].includes(role)) {
+    const caller = await getFirestore().collection("users")
+        .doc(request.auth.uid).get();
+    const callerRoles = caller.exists && Array.isArray(caller.data().roles) ?
+      caller.data().roles : [];
+    if (!callerRoles.includes("super_admin")) {
+      throw new HttpsError("permission-denied", "Solo i Super Admin possono assegnare ruoli admin.");
+    }
   }
 
   const email = String(request.data?.email || "").trim().toLowerCase();

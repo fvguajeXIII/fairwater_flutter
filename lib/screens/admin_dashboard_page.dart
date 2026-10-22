@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -246,11 +247,63 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
             ),
             const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ElevatedButton.icon(
+                onPressed: () => _showAddUserDialog(context),
+                icon: const Icon(Icons.person_add),
+                label: const Text('Aggiungi utente'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.ocean,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             _buildUsersManagement(context, isMobile),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _showAddUserDialog(BuildContext context) async {
+    final superAdmin = await _adminService.isUserSuperAdmin();
+    if (!context.mounted) return;
+    final user = await showDialog<_NewManagedUser>(
+      context: context,
+      builder: (_) => _AddUserDialog(canAssignAdminRoles: superAdmin),
+    );
+    if (user == null || !context.mounted) return;
+
+    try {
+      final callable = FirebaseFunctions.instanceFor(
+        region: 'europe-west1',
+      ).httpsCallable('createManagedUser');
+      await callable.call({
+        'firstName': user.firstName,
+        'lastName': user.lastName,
+        'email': user.email,
+        'password': user.password,
+        'role': user.role,
+        'phone': user.phone,
+        'residence': user.residence,
+      });
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Utente creato correttamente')),
+      );
+    } on FirebaseFunctionsException catch (error) {
+      if (!context.mounted) return;
+      final message = error.message ?? 'Creazione utente non riuscita';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Errore durante la creazione: $error')),
+      );
+    }
   }
 
   Widget _buildBarsManagement(BuildContext context, bool isMobile) {
@@ -1042,6 +1095,168 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _NewManagedUser {
+  const _NewManagedUser({
+    required this.firstName,
+    required this.lastName,
+    required this.email,
+    required this.password,
+    required this.role,
+    required this.phone,
+    required this.residence,
+  });
+
+  final String firstName;
+  final String lastName;
+  final String email;
+  final String password;
+  final String role;
+  final String phone;
+  final String residence;
+}
+
+class _AddUserDialog extends StatefulWidget {
+  const _AddUserDialog({required this.canAssignAdminRoles});
+
+  final bool canAssignAdminRoles;
+
+  @override
+  State<_AddUserDialog> createState() => _AddUserDialogState();
+}
+
+class _AddUserDialogState extends State<_AddUserDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _firstName = TextEditingController();
+  final _lastName = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _phone = TextEditingController();
+  final _residence = TextEditingController();
+  String _role = 'customer';
+
+  @override
+  void dispose() {
+    _firstName.dispose();
+    _lastName.dispose();
+    _email.dispose();
+    _password.dispose();
+    _phone.dispose();
+    _residence.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = <(String, String)>[
+      ('customer', 'Cliente'),
+      ('refill_manager', 'Refill Manager'),
+      ('sponsor_manager', 'Sponsor Manager'),
+      if (widget.canAssignAdminRoles) ...[
+        ('admin', 'Admin'),
+        ('super_admin', 'Super Admin'),
+      ],
+    ];
+
+    return AlertDialog(
+      title: const Text('Aggiungi utente'),
+      content: SizedBox(
+        width: 440,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _field(_firstName, 'Nome'),
+                _field(_lastName, 'Cognome'),
+                _field(
+                  _email,
+                  'Email',
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                _field(
+                  _password,
+                  'Password (almeno 8 caratteri)',
+                  obscureText: true,
+                  validator: (value) => (value?.length ?? 0) < 8
+                      ? 'Inserisci almeno 8 caratteri'
+                      : null,
+                ),
+                _field(
+                  _phone,
+                  'Telefono',
+                  required: false,
+                  keyboardType: TextInputType.phone,
+                ),
+                _field(_residence, 'Residenza', required: false),
+                DropdownButtonFormField<String>(
+                  initialValue: _role,
+                  decoration: const InputDecoration(labelText: 'Ruolo'),
+                  items: roles
+                      .map(
+                        (role) => DropdownMenuItem(
+                          value: role.$1,
+                          child: Text(role.$2),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) =>
+                      setState(() => _role = value ?? 'customer'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Annulla'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (!_formKey.currentState!.validate()) return;
+            Navigator.pop(
+              context,
+              _NewManagedUser(
+                firstName: _firstName.text.trim(),
+                lastName: _lastName.text.trim(),
+                email: _email.text.trim(),
+                password: _password.text,
+                role: _role,
+                phone: _phone.text.trim(),
+                residence: _residence.text.trim(),
+              ),
+            );
+          },
+          child: const Text('Crea utente'),
+        ),
+      ],
+    );
+  }
+
+  Widget _field(
+    TextEditingController controller,
+    String label, {
+    bool required = true,
+    bool obscureText = false,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(labelText: label),
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      validator:
+          validator ??
+          (value) => required && (value?.trim().isEmpty ?? true)
+              ? 'Campo obbligatorio'
+              : null,
     );
   }
 }
