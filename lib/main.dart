@@ -83,43 +83,61 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         if (snapshot.data != null) {
-          // Verifica se l'utente è un admin
           return FutureBuilder<bool>(
-            future: adminService.isUserAdmin(),
-            builder: (context, adminSnapshot) {
-              if (adminSnapshot.connectionState == ConnectionState.waiting) {
+            future: OnboardingService().isCompleted(),
+            builder: (context, onboardingSnapshot) {
+              if (onboardingSnapshot.connectionState ==
+                  ConnectionState.waiting) {
                 return const _LoadingScreen();
               }
 
-              // Se è admin, vai alla dashboard admin
-              if (adminSnapshot.data == true) {
-                return const AdminDashboardPage();
+              if (onboardingSnapshot.data == false) {
+                return OnboardingPage(
+                  onExistingAccount: () =>
+                      setState(() => _onboardingCompletedInSession = true),
+                );
               }
 
-              // Altrimenti carica le preferenze per il login biometrico
-              return FutureBuilder(
-                future: loginPreferencesService.load(),
-                builder: (context, preferencesSnapshot) {
-                  if (preferencesSnapshot.connectionState ==
+              // Verifica se l'utente è un admin
+              return FutureBuilder<bool>(
+                future: adminService.isUserAdmin(),
+                builder: (context, adminSnapshot) {
+                  if (adminSnapshot.connectionState ==
                       ConnectionState.waiting) {
                     return const _LoadingScreen();
                   }
 
-                  final preferences =
-                      preferencesSnapshot.data ??
-                      const LoginPreferences(
-                        rememberMe: false,
-                        biometricEnabled: false,
-                        savedEmail: '',
-                      );
-
-                  if (!preferences.rememberMe ||
-                      !preferences.biometricEnabled) {
-                    return const HomePage();
+                  // Se è admin, vai alla dashboard admin
+                  if (adminSnapshot.data == true) {
+                    return const AdminDashboardPage();
                   }
 
-                  return _BiometricGate(
-                    biometricAuthService: biometricAuthService,
+                  // Altrimenti carica le preferenze per il login biometrico
+                  return FutureBuilder(
+                    future: loginPreferencesService.load(),
+                    builder: (context, preferencesSnapshot) {
+                      if (preferencesSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const _LoadingScreen();
+                      }
+
+                      final preferences =
+                          preferencesSnapshot.data ??
+                          const LoginPreferences(
+                            rememberMe: false,
+                            biometricEnabled: false,
+                            savedEmail: '',
+                          );
+
+                      if (!preferences.rememberMe ||
+                          !preferences.biometricEnabled) {
+                        return const HomePage();
+                      }
+
+                      return _BiometricGate(
+                        biometricAuthService: biometricAuthService,
+                      );
+                    },
                   );
                 },
               );
@@ -137,9 +155,8 @@ class _AuthGateState extends State<AuthGate> {
                     _onboardingCompletedInSession
                 ? const LoginPage()
                 : OnboardingPage(
-                    onExistingAccount: () => setState(
-                      () => _onboardingCompletedInSession = true,
-                    ),
+                    onExistingAccount: () =>
+                        setState(() => _onboardingCompletedInSession = true),
                   );
           },
         );

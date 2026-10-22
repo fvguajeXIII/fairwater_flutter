@@ -64,6 +64,8 @@ class AuthService {
     required String residence,
     String? phone,
     String? referralCode,
+    String? photoBase64,
+    String? birthDate,
   }) async {
     final credential = await _auth
         .createUserWithEmailAndPassword(email: email.trim(), password: password)
@@ -91,7 +93,9 @@ class AuthService {
           'residence': residence.trim(),
           'phone': phone?.trim() ?? '',
           'referralCode': referralCode?.trim() ?? '',
+          'birthDate': birthDate?.trim() ?? '',
           'photoUrl': '',
+          'photoBase64': photoBase64 ?? '',
           'provider': 'password',
           'roles': ['customer'],
           'accountType': 'customer',
@@ -249,6 +253,7 @@ class AuthService {
           'residence': '',
           'phone': user.phoneNumber ?? '',
           'referralCode': '',
+          'birthDate': '',
           'photoUrl': user.photoURL ?? '',
           'provider': provider,
           'roles': ['customer'],

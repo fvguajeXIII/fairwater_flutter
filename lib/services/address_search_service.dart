@@ -10,12 +10,18 @@ class AddressSuggestion {
     required this.label,
     required this.mainText,
     required this.secondaryText,
+    required this.city,
+    required this.latitude,
+    required this.longitude,
   });
 
   final String placeId;
   final String label;
   final String mainText;
   final String secondaryText;
+  final String city;
+  final double latitude;
+  final double longitude;
 }
 
 class AddressDetails {
@@ -81,12 +87,13 @@ class AddressSearchService {
   Future<List<AddressSuggestion>> autocomplete({
     required String query,
     required String sessionToken,
+    String? type,
   }) async {
     if (geoapifyApiKey.isEmpty) {
       throw StateError('GEOAPIFY_API_KEY non configurata.');
     }
 
-    final uri = Uri.https('api.geoapify.com', '/v1/geocode/autocomplete', {
+    final parameters = <String, String>{
       'text': query,
       'format': 'json',
       'lang': 'it',
@@ -94,7 +101,13 @@ class AddressSearchService {
       'filter': 'countrycode:it',
       'bias': 'proximity:13.35,41.30',
       'apiKey': geoapifyApiKey,
-    });
+    };
+    if (type != null) parameters['type'] = type;
+    final uri = Uri.https(
+      'api.geoapify.com',
+      '/v1/geocode/autocomplete',
+      parameters,
+    );
     final response = await _client.get(uri);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError('Geoapify ha risposto con ${response.statusCode}.');
@@ -116,6 +129,9 @@ class AddressSearchService {
           label: details.formattedAddress,
           mainText: (place['address_line1'] as String? ?? '').trim(),
           secondaryText: (place['address_line2'] as String? ?? '').trim(),
+          city: details.city,
+          latitude: details.latitude,
+          longitude: details.longitude,
         ),
       );
     }

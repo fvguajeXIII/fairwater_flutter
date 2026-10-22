@@ -31,6 +31,11 @@ class RefillNotificationService {
 
   Future<void> stopBackgroundMonitoring() async {}
 
+  Future<void> scheduleBirthdayNotification({
+    required String birthDate,
+    required String userName,
+  }) async {}
+
   void updateBars(List<Object> bars) {}
 
   Future<void> checkNearbyRefills(Position position) async {}

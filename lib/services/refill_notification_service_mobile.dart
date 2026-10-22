@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 import 'bar_service.dart';
 
@@ -18,6 +20,10 @@ class RefillNotificationService {
   static const Duration merchantCooldown = Duration(hours: 2);
   static const String _channelId = 'nearby_refill_channel';
   static const String _channelName = 'Refill vicini';
+  static const String _birthdayChannelId = 'birthday_notifications';
+  static const String _birthdayChannelName = 'Compleanni';
+  static const String _birthdayChannelDescription =
+      'Promemoria annuali per il compleanno.';
   static const String _channelDescription =
       'Avvisi quando sei vicino a un punto refill.';
   static const String _trackingChannelName = 'Controllo refill in background';
@@ -57,6 +63,8 @@ class RefillNotificationService {
       defaultPresentSound: true,
     );
 
+    tz.initializeTimeZones();
+
     await _plugin.initialize(
       const InitializationSettings(android: androidSettings, iOS: iosSettings),
     );
@@ -71,6 +79,19 @@ class RefillNotificationService {
             _channelName,
             description: _channelDescription,
             importance: Importance.high,
+          ),
+        );
+
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            _birthdayChannelId,
+            _birthdayChannelName,
+            description: _birthdayChannelDescription,
+            importance: Importance.defaultImportance,
           ),
         );
 
@@ -161,7 +182,9 @@ class RefillNotificationService {
 
       try {
         final current = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+          ),
         );
         await checkNearbyRefills(current);
       } catch (_) {
@@ -311,6 +334,62 @@ class RefillNotificationService {
 
   String _storageKey(String merchantId) => '$_merchantPrefix$merchantId';
 
+  Future<void> scheduleBirthdayNotification({
+    required String birthDate,
+    required String userName,
+  }) async {
+    if (kIsWeb) {
+      return;
+    }
+    try {
+      await initialize();
+      await requestPermissions();
+
+      final parsed = DateTime.tryParse(birthDate);
+      if (parsed == null) {
+        return;
+      }
+
+      final now = DateTime.now();
+      var nextBirthday = DateTime(now.year, parsed.month, parsed.day, 10, 0);
+      if (!nextBirthday.isAfter(now)) {
+        nextBirthday = DateTime(now.year + 1, parsed.month, parsed.day, 10, 0);
+      }
+
+      final scheduledDate = tz.TZDateTime.from(nextBirthday, tz.local);
+      final pending = await _plugin.pendingNotificationRequests();
+      final alreadyScheduled = pending.any(
+        (request) => request.id == _birthdayNotificationId(userName),
+      );
+      if (alreadyScheduled) {
+        await _plugin.cancel(_birthdayNotificationId(userName));
+      }
+
+      await _plugin.zonedSchedule(
+        _birthdayNotificationId(userName),
+        'Buon compleanno, $userName!',
+        'Oggi è il tuo giorno speciale. Dedica un momento a te e ai tuoi ritmi.',
+        scheduledDate,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _birthdayChannelId,
+            _birthdayChannelName,
+            channelDescription: _birthdayChannelDescription,
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.dateAndTime,
+      );
+    } catch (_) {
+      // Best effort; birthday notifications are optional.
+    }
+  }
+
   Future<void> _showNotification(BarSpot bar, int distanceMeters) async {
     final title = 'Punto refill vicino';
     final body =
@@ -334,4 +413,7 @@ class RefillNotificationService {
   }
 
   int _notificationIdForBar(String barId) => barId.hashCode & 0x7fffffff;
+
+  int _birthdayNotificationId(String userName) =>
+      ('birthday_${userName.toLowerCase()}'.hashCode & 0x7fffffff);
 }

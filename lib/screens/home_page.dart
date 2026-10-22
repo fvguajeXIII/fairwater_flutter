@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/app_config.dart';
+import '../services/address_search_service.dart';
 import '../services/auth_service.dart';
 import '../services/bar_service.dart';
 import '../services/profile_service.dart';
@@ -330,10 +331,17 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 12)),
                 if (nearbyBars.isEmpty)
-                  const SliverToBoxAdapter(
+                  SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.fromLTRB(20, 0, 20, 120),
-                      child: _EmptyNearbyBarsCard(),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const _EmptyNearbyBarsCard(),
+                          const SizedBox(height: 14),
+                          _CityRefillSearch(bars: bars, center: _currentLatLng),
+                        ],
+                      ),
                     ),
                   )
                 else
@@ -1839,6 +1847,242 @@ class _EmptyNearbyBarsCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CityRefillSearch extends StatefulWidget {
+  const _CityRefillSearch({required this.bars, required this.center});
+
+  final List<BarSpot> bars;
+  final LatLng center;
+
+  @override
+  State<_CityRefillSearch> createState() => _CityRefillSearchState();
+}
+
+class _CityRefillSearchState extends State<_CityRefillSearch> {
+  final TextEditingController _cityController = TextEditingController();
+  final AddressSearchService _addressSearchService = AddressSearchService();
+  Timer? _searchDebounce;
+  List<AddressSuggestion> _suggestions = const [];
+  String _query = '';
+  String? _selectedCity;
+  LatLng? _selectedCenter;
+  bool _searching = false;
+  String? _searchError;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _cityController.dispose();
+    super.dispose();
+  }
+
+  void _onCityChanged(String value) {
+    _searchDebounce?.cancel();
+    setState(() {
+      _query = value;
+      _selectedCity = null;
+      _selectedCenter = null;
+      _searchError = null;
+      _suggestions = const [];
+      _searching = value.trim().length >= 2;
+    });
+    final query = value.trim();
+    if (query.length < 2) {
+      setState(() => _searching = false);
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () async {
+      try {
+        final suggestions = await _addressSearchService.autocomplete(
+          query: query,
+          sessionToken: 'home-city-search',
+          type: 'city',
+        );
+        if (!mounted || _cityController.text.trim() != query) return;
+        setState(() {
+          _suggestions = suggestions;
+          _searching = false;
+        });
+      } catch (_) {
+        if (!mounted || _cityController.text.trim() != query) return;
+        setState(() {
+          _searching = false;
+          _searchError =
+              'Ricerca dei comuni non disponibile. Riprova tra poco.';
+        });
+      }
+    });
+  }
+
+  void _selectCity(AddressSuggestion suggestion) {
+    final city = suggestion.city.isEmpty
+        ? (suggestion.mainText.isEmpty ? suggestion.label : suggestion.mainText)
+        : suggestion.city;
+    setState(() {
+      _selectedCity = city;
+      _selectedCenter = LatLng(suggestion.latitude, suggestion.longitude);
+      _cityController.text = city;
+      _query = city;
+      _suggestions = const [];
+      _searchError = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedCity = _selectedCity?.trim().toLowerCase();
+    final results =
+        selectedCity == null || selectedCity.isEmpty
+              ? <_NearbyBarView>[]
+              : widget.bars
+                    .where(
+                      (bar) => bar.city.trim().toLowerCase() == selectedCity,
+                    )
+                    .map((bar) {
+                      final center = _selectedCenter ?? widget.center;
+                      final distance = Geolocator.distanceBetween(
+                        center.latitude,
+                        center.longitude,
+                        bar.location.latitude,
+                        bar.location.longitude,
+                      );
+                      return _NearbyBarView(
+                        bar: bar,
+                        location: bar.location,
+                        distanceMeters: distance,
+                      );
+                    })
+                    .toList()
+          ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Cerca punti refill in un comune',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Cerca e seleziona un comune italiano per vedere i punti refill affiliati a FairWater.',
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: AppColors.slate,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _cityController,
+                textInputAction: TextInputAction.search,
+                onChanged: _onCityChanged,
+                decoration: InputDecoration(
+                  hintText: 'Cerca un comune italiano',
+                  prefixIcon: const Icon(Icons.location_city_rounded),
+                  suffixIcon: _searching
+                      ? const Padding(
+                          padding: EdgeInsets.all(14),
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : _query.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Cancella ricerca',
+                          onPressed: () {
+                            _cityController.clear();
+                            setState(() {
+                              _query = '';
+                              _selectedCity = null;
+                              _selectedCenter = null;
+                              _suggestions = const [];
+                              _searchError = null;
+                            });
+                          },
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                  filled: true,
+                  fillColor: AppColors.surfaceMuted,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_searchError != null) ...[
+          const SizedBox(height: 10),
+          Text(_searchError!, style: TextStyle(color: AppColors.slate)),
+        ],
+        if (_suggestions.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              children: [
+                for (var i = 0; i < _suggestions.length; i++) ...[
+                  if (i > 0) const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.location_on_outlined,
+                      color: _kPrimary,
+                    ),
+                    title: Text(
+                      _suggestions[i].city.isEmpty
+                          ? _suggestions[i].mainText
+                          : _suggestions[i].city,
+                    ),
+                    subtitle: Text(_suggestions[i].secondaryText),
+                    onTap: () => _selectCity(_suggestions[i]),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+        if (_selectedCity != null) ...[
+          const SizedBox(height: 12),
+          if (results.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Text(
+                'Nessun punto refill affiliato trovato a "${_selectedCity!}".',
+                style: TextStyle(fontSize: 13, color: AppColors.slate),
+              ),
+            )
+          else
+            for (var i = 0; i < results.length; i++) ...[
+              if (i > 0) const SizedBox(height: 12),
+              _BarCard(view: results[i]),
+            ],
+        ],
+      ],
     );
   }
 }
