@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -19,20 +20,28 @@ class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
   void _showLogin(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      enableDrag: true,
-      builder: (context) => Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width > 600
-                ? 560
-                : MediaQuery.of(context).size.width,
-          ),
-          child: const _LoginSheet(),
-        ),
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        opaque: false,
+        transitionDuration: const Duration(milliseconds: 1100),
+        reverseTransitionDuration: const Duration(milliseconds: 750),
+        pageBuilder: (_, __, ___) => const _LoginSheet(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final waveAnimation = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeInOutCubic,
+            reverseCurve: Curves.easeInOutCubic,
+          );
+
+          return AnimatedBuilder(
+            animation: waveAnimation,
+            child: child,
+            builder: (context, child) => ClipPath(
+              clipper: _SeaWaveRevealClipper(progress: waveAnimation.value),
+              child: child,
+            ),
+          );
+        },
       ),
     );
   }
@@ -161,6 +170,37 @@ class _WaterPatternPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _WaterPatternPainter oldDelegate) => false;
+}
+
+class _SeaWaveRevealClipper extends CustomClipper<Path> {
+  const _SeaWaveRevealClipper({required this.progress});
+
+  final double progress;
+
+  @override
+  Path getClip(Size size) {
+    final t = progress.clamp(0.0, 1.0).toDouble();
+    final boundaryY = size.height * (1 - t);
+    final amplitude = 24 * math.sin(t * math.pi);
+    final path = Path()..moveTo(0, boundaryY);
+
+    const sampleCount = 64;
+    for (var i = 1; i <= sampleCount; i++) {
+      final x = size.width * i / sampleCount;
+      final phase = (i / sampleCount) * math.pi * 4 + t * math.pi * 2;
+      final y = boundaryY + amplitude * math.sin(phase);
+      path.lineTo(x, y);
+    }
+
+    return path
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant _SeaWaveRevealClipper oldClipper) =>
+      oldClipper.progress != progress;
 }
 
 class _LoginSheet extends StatefulWidget {
@@ -330,244 +370,234 @@ class _LoginSheetState extends State<_LoginSheet> {
         (defaultTargetPlatform == TargetPlatform.iOS ||
             defaultTargetPlatform == TargetPlatform.macOS);
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.78,
-      minChildSize: 0.48,
-      maxChildSize: 0.95,
-      snap: true,
-      snapSizes: const [0.58, 0.78, 0.95],
-      builder: (_, scrollCtrl) => Container(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [AppColors.foam, AppColors.mist],
           ),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(34)),
         ),
-        child: ListView(
-          controller: scrollCtrl,
-          padding: EdgeInsets.fromLTRB(24, 0, 24, 24 + viewInsets),
-          children: [
-            Center(
-              child: Container(
-                margin: const EdgeInsets.symmetric(vertical: 14),
-                width: 46,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: AppColors.borderStrong,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            Row(
-              children: [
-                const WaterBottleBadge(size: 58, showGlow: false),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Bentornato',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.ink,
+        child: SafeArea(
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(24, 16, 24, 24 + viewInsets),
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    tooltip: 'Indietro',
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Bentornato',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.ink,
+                          ),
                         ),
+                        Text(
+                          'Accedi e continua il tuo ritmo di refill.',
+                          style: TextStyle(
+                            color: AppColors.slate.withValues(alpha: 0.92),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: _fieldDeco(
+                          'Email',
+                          Icons.alternate_email_rounded,
+                        ),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return 'Inserisci una email';
+                          }
+                          if (!RegExp(
+                            r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                          ).hasMatch(v)) {
+                            return 'Email non valida';
+                          }
+                          return null;
+                        },
                       ),
-                      Text(
-                        'Accedi e continua il tuo ritmo di refill.',
-                        style: TextStyle(
-                          color: AppColors.slate.withValues(alpha: 0.92),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _passCtrl,
+                        obscureText: _obscure,
+                        decoration:
+                            _fieldDeco(
+                              'Password',
+                              Icons.lock_outline_rounded,
+                            ).copyWith(
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscure
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: AppColors.slate,
+                                ),
+                                onPressed: () =>
+                                    setState(() => _obscure = !_obscure),
+                              ),
+                            ),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return 'Inserisci la password';
+                          }
+                          if (v.length < 6) return 'Almeno 6 caratteri';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isSubmitting ? null : _login,
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text('Accedi'),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppColors.border),
               ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: _fieldDeco(
-                        'Email',
-                        Icons.alternate_email_rounded,
-                      ),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) {
-                          return 'Inserisci una email';
-                        }
-                        if (!RegExp(
-                          r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                        ).hasMatch(v)) {
-                          return 'Email non valida';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _passCtrl,
-                      obscureText: _obscure,
-                      decoration:
-                          _fieldDeco(
-                            'Password',
-                            Icons.lock_outline_rounded,
-                          ).copyWith(
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscure
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: AppColors.slate,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _obscure = !_obscure),
-                            ),
-                          ),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) {
-                          return 'Inserisci la password';
-                        }
-                        if (v.length < 6) return 'Almeno 6 caratteri';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 18),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _login,
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : const Text('Accedi'),
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 18),
+              _PreferenceTile(
+                title: 'Ricordami',
+                subtitle:
+                    'Mantieni pronta la tua email per il prossimo accesso.',
+                leading: Icons.bookmark_added_rounded,
+                trailing: Checkbox(
+                  value: _rememberMe,
+                  onChanged: _isSubmitting
+                      ? null
+                      : (value) {
+                          setState(() {
+                            _rememberMe = value ?? false;
+                            if (!_rememberMe) {
+                              _useBiometric = false;
+                            }
+                          });
+                        },
                 ),
               ),
-            ),
-            const SizedBox(height: 18),
-            _PreferenceTile(
-              title: 'Ricordami',
-              subtitle: 'Mantieni pronta la tua email per il prossimo accesso.',
-              leading: Icons.bookmark_added_rounded,
-              trailing: Checkbox(
-                value: _rememberMe,
-                onChanged: _isSubmitting
-                    ? null
-                    : (value) {
-                        setState(() {
-                          _rememberMe = value ?? false;
-                          if (!_rememberMe) {
-                            _useBiometric = false;
-                          }
-                        });
-                      },
+              if (_biometricAvailable) ...[
+                const SizedBox(height: 10),
+                _PreferenceTile(
+                  title: 'Accesso biometrico',
+                  subtitle: _rememberMe
+                      ? 'Sblocca FairWater con impronta o Face ID.'
+                      : 'Attiva prima "Ricordami".',
+                  leading: Icons.fingerprint_rounded,
+                  trailing: Switch(
+                    value: _useBiometric,
+                    onChanged: !_rememberMe || _isSubmitting
+                        ? null
+                        : (value) => setState(() => _useBiometric = value),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  const Expanded(child: Divider()),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      'Oppure entra con',
+                      style: TextStyle(
+                        color: AppColors.slate.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ),
+                  const Expanded(child: Divider()),
+                ],
               ),
-            ),
-            if (_biometricAvailable) ...[
-              const SizedBox(height: 10),
-              _PreferenceTile(
-                title: 'Accesso biometrico',
-                subtitle: _rememberMe
-                    ? 'Sblocca FairWater con impronta o Face ID.'
-                    : 'Attiva prima "Ricordami".',
-                leading: Icons.fingerprint_rounded,
-                trailing: Switch(
-                  value: _useBiometric,
-                  onChanged: !_rememberMe || _isSubmitting
-                      ? null
-                      : (value) => setState(() => _useBiometric = value),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  if (isAppleAvailable) ...[
+                    Expanded(
+                      child: _SocialBtn(
+                        label: 'Apple',
+                        dark: true,
+                        iconWidget: const Icon(Icons.apple, size: 20),
+                        onTap: _isSubmitting
+                            ? null
+                            : () => ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Accesso con Apple non ancora disponibile.',
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: _SocialBtn(
+                      label: 'Google',
+                      dark: false,
+                      iconWidget: const Icon(Icons.g_mobiledata, size: 24),
+                      onTap: _isSubmitting ? null : _signInWithGoogle,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    final navigator = Navigator.of(context);
+                    if (navigator.canPop()) {
+                      navigator.pop();
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        Navigator.of(context).pushNamed('/onboarding');
+                      });
+                    }
+                  },
+                  child: const Text('Non hai ancora un account? Registrati'),
                 ),
               ),
             ],
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                const Expanded(child: Divider()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    'Oppure entra con',
-                    style: TextStyle(
-                      color: AppColors.slate.withValues(alpha: 0.9),
-                    ),
-                  ),
-                ),
-                const Expanded(child: Divider()),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                if (isAppleAvailable) ...[
-                  Expanded(
-                    child: _SocialBtn(
-                      label: 'Apple',
-                      dark: true,
-                      iconWidget: const Icon(Icons.apple, size: 20),
-                      onTap: _isSubmitting
-                          ? null
-                          : () => ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Accesso con Apple non ancora disponibile.',
-                                ),
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  child: _SocialBtn(
-                    label: 'Google',
-                    dark: false,
-                    iconWidget: const Icon(Icons.g_mobiledata, size: 24),
-                    onTap: _isSubmitting ? null : _signInWithGoogle,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Center(
-              child: TextButton(
-                onPressed: () {
-                  final navigator = Navigator.of(context);
-                  if (navigator.canPop()) {
-                    navigator.pop();
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      Navigator.of(context).pushNamed('/onboarding');
-                    });
-                  }
-                },
-                child: const Text('Non hai ancora un account? Registrati'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
