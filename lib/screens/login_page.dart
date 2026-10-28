@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../services/auth_service.dart';
 import '../services/biometric_auth_service.dart';
@@ -39,142 +40,127 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: WaterBackdrop(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset('assets/login.jpg', fit: BoxFit.cover),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.deepOcean.withValues(alpha: 0.26),
-                    AppColors.deepOcean.withValues(alpha: 0.72),
-                  ],
-                ),
-              ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const _WaterPatternBackground(),
+          SafeArea(
+            child: Center(
+              child: _LoginLogoButton(onPressed: () => _showLogin(context)),
             ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _LoginBrandHero(),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: AppDecorations.glassCard(radius: 32),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Riempila di buone abitudini.',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.ink,
-                              height: 1.1,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'FairWater trasforma ogni refill in un gesto visibile per te, la community e l accesso all acqua.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              height: 1.5,
-                              color: AppColors.slate,
-                            ),
-                          ),
-                          const SizedBox(height: 22),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () => _showLogin(context),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.ocean,
-                                foregroundColor: Colors.white,
-                              ),
-                              child: const Text('Accedi'),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                'Nuovo su FairWater?',
-                                style: TextStyle(
-                                  color: AppColors.slate,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.of(context)
-                                    .pushNamed('/onboarding'),
-                                child: const Text(
-                                  'Crea account',
-                                  style: TextStyle(
-                                    color: AppColors.deepOcean,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LoginLogoButton extends StatelessWidget {
+  const _LoginLogoButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final logoWidth = screenWidth < 468 ? screenWidth - 48 : 420.0;
+
+    return Semantics(
+      button: true,
+      label: 'Logo FairWater. Tocca per accedere.',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          customBorder: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SvgPicture.asset(
+              'assets/logo_fairwater.svg',
+              width: logoWidth,
+              height: 130,
+              fit: BoxFit.contain,
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _LoginBrandHero extends StatelessWidget {
-  const _LoginBrandHero();
+class _WaterPatternBackground extends StatelessWidget {
+  const _WaterPatternBackground();
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.16),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-          ),
-          child: Text(
-            'Borraccia. Refill. Impatto.',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.92),
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'L app che fa scorrere\nla tua identita acqua.',
-          style: TextStyle(
-            fontSize: 34,
-            height: 1.02,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-          ),
-        ),
-      ],
-    );
+  Widget build(BuildContext context) => const DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFE9FAFF), Color(0xFFBDECF5), Color(0xFF91D8E8)],
+      ),
+    ),
+    child: CustomPaint(painter: _WaterPatternPainter()),
+  );
+}
+
+class _WaterPatternPainter extends CustomPainter {
+  const _WaterPatternPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var row = 0; row < 16; row++) {
+      final y = row * 48.0 + 12;
+      final path = Path()
+        ..moveTo(0, y)
+        ..cubicTo(
+          size.width * 0.24,
+          y - 18,
+          size.width * 0.30,
+          y + 18,
+          size.width * 0.52,
+          y,
+        )
+        ..cubicTo(
+          size.width * 0.72,
+          y - 16,
+          size.width * 0.82,
+          y + 16,
+          size.width,
+          y - 2,
+        );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = AppColors.ocean.withValues(alpha: row.isEven ? 0.11 : 0.07)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = row.isEven ? 2 : 1,
+      );
+    }
+
+    final bubblePaint = Paint()..style = PaintingStyle.stroke;
+    for (final bubble in const [
+      (0.12, 0.18, 8.0),
+      (0.82, 0.12, 12.0),
+      (0.90, 0.42, 6.0),
+      (0.08, 0.68, 11.0),
+      (0.76, 0.82, 7.0),
+    ]) {
+      bubblePaint
+        ..color = Colors.white.withValues(alpha: 0.48)
+        ..strokeWidth = 2;
+      canvas.drawCircle(
+        Offset(size.width * bubble.$1, size.height * bubble.$2),
+        bubble.$3,
+        bubblePaint,
+      );
+    }
   }
+
+  @override
+  bool shouldRepaint(covariant _WaterPatternPainter oldDelegate) => false;
 }
 
 class _LoginSheet extends StatefulWidget {

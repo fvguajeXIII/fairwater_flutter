@@ -78,6 +78,7 @@ flutter:
 
   assets:
     - assets/logo.svg
+    - assets/logo_fairwater.svg
     - assets/login.jpg
     - assets/welcome_bottle.jpeg
 
