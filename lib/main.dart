@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'firebase_options.dart';
 import 'screens/admin_dashboard_page.dart';
@@ -42,6 +43,12 @@ class MyApp extends StatelessWidget {
       title: 'FairWater',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('it', 'IT'), Locale('en', 'US')],
       home: const AuthGate(),
       routes: {
         '/admin-login': (context) => const AdminLoginPage(),
@@ -294,6 +301,12 @@ class _BootstrapErrorApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('it', 'IT'), Locale('en', 'US')],
       home: Scaffold(
         body: WaterBackdrop(
           child: Center(

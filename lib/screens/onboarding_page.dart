@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -240,17 +241,67 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Future<void> _pickBirthDate(BuildContext context) async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final firstDate = DateTime(1900);
     final initialDate = _birthDate.text.isEmpty
         ? DateTime.now().subtract(const Duration(days: 365 * 25))
         : DateTime.tryParse(_birthDate.text) ??
               DateTime.now().subtract(const Duration(days: 365 * 25));
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-      locale: const Locale('it', 'IT'),
-    );
+    final boundedInitialDate = initialDate.isBefore(firstDate)
+        ? firstDate
+        : initialDate.isAfter(today)
+        ? today
+        : initialDate;
+    final DateTime? picked;
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      var selectedDate = boundedInitialDate;
+      picked = await showCupertinoModalPopup<DateTime>(
+        context: context,
+        builder: (context) => Container(
+          height: 280,
+          color: CupertinoColors.systemBackground.resolveFrom(context),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CupertinoButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Annulla'),
+                    ),
+                    CupertinoButton(
+                      onPressed: () => Navigator.of(context).pop(selectedDate),
+                      child: const Text('Fine'),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: CupertinoDatePicker(
+                    mode: CupertinoDatePickerMode.date,
+                    initialDateTime: boundedInitialDate,
+                    minimumDate: firstDate,
+                    maximumDate: today,
+                    use24hFormat: true,
+                    onDateTimeChanged: (date) => selectedDate = date,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else {
+      picked = await showDatePicker(
+        context: context,
+        initialDate: boundedInitialDate,
+        firstDate: firstDate,
+        lastDate: today,
+        locale: const Locale('it', 'IT'),
+      );
+    }
     if (picked != null) {
       final formatted =
           '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';

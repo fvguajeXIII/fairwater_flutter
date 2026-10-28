@@ -71,6 +71,13 @@ class AppTheme {
         elevation: 0,
         foregroundColor: AppColors.ink,
       ),
+      datePickerTheme: const DatePickerThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        headerBackgroundColor: AppColors.ocean,
+        headerForegroundColor: Colors.white,
+        dividerColor: AppColors.border,
+      ),
       cardTheme: CardThemeData(
         color: Colors.white,
         shadowColor: AppColors.deepOcean.withValues(alpha: 0.10),
