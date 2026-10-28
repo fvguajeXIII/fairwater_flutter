@@ -96,11 +96,7 @@ class CustomerQrPage extends StatelessWidget {
                                   width: 3,
                                 ),
                               ),
-                              child: const Icon(
-                                Icons.water_drop_rounded,
-                                color: AppColors.ocean,
-                                size: 31,
-                              ),
+                              child: const _QrBottleMark(),
                             ),
                           ],
                         ),
@@ -126,4 +122,63 @@ class CustomerQrPage extends StatelessWidget {
       ),
     );
   }
+}
+
+class _QrBottleMark extends StatelessWidget {
+  const _QrBottleMark();
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 26,
+    height: 36,
+    child: Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        Positioned(
+          top: 10,
+          child: Container(
+            width: 20,
+            height: 25,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.aqua, AppColors.ocean],
+              ),
+              border: Border.all(color: AppColors.deepOcean, width: 1.2),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Center(
+              child: Container(
+                height: 4,
+                color: Colors.white.withValues(alpha: 0.85),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 5,
+          child: Container(
+            width: 8,
+            height: 7,
+            decoration: BoxDecoration(
+              color: AppColors.ocean,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 1,
+          child: Container(
+            width: 12,
+            height: 6,
+            decoration: BoxDecoration(
+              color: AppColors.deepOcean,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

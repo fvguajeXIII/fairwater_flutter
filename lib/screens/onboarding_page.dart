@@ -491,31 +491,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     ),
                   )
                 else
-                  const WaterBottleBadge(size: 46, showGlow: false),
+                  const SizedBox(width: 48),
                 const Spacer(),
-                Text(
-                  '${_step + 1} di $_stepCount',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    shadows: const [
-                      Shadow(color: Color(0x99000000), blurRadius: 8),
-                    ],
-                  ),
-                ),
               ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(99),
-              child: LinearProgressIndicator(
-                minHeight: 6,
-                value: (_step + 1) / _stepCount,
-                color: Colors.white,
-                backgroundColor: Colors.white.withValues(alpha: 0.30),
-              ),
             ),
           ),
           Expanded(
@@ -608,6 +586,29 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   onPressed: _submitting ? null : _openLogin,
                   style: TextButton.styleFrom(foregroundColor: Colors.white),
                   child: const Text('Ho già un account'),
+                ),
+                const SizedBox(height: 4),
+                Semantics(
+                  label: 'Pagina ${_step + 1} di $_stepCount',
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      _stepCount,
+                      (index) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOut,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: index == _step ? 18 : 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(
+                            alpha: index == _step ? 1 : 0.48,
+                          ),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1091,16 +1092,31 @@ class _AccountStep extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          CheckboxListTile(
-            value: acceptedTerms,
-            onChanged: onTermsChanged,
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
-            title: const Text(
-              'Accetto Termini e Privacy',
-              style: TextStyle(fontWeight: FontWeight.w700),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.97),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.borderStrong),
             ),
-            subtitle: const Text('Necessario per creare l’account.'),
+            child: CheckboxListTile(
+              value: acceptedTerms,
+              onChanged: onTermsChanged,
+              activeColor: AppColors.ocean,
+              checkColor: Colors.white,
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              title: const Text(
+                'Accetto Termini e Privacy',
+                style: TextStyle(
+                  color: AppColors.ink,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              subtitle: const Text(
+                "Necessario per creare l'account.",
+                style: TextStyle(color: AppColors.slate),
+              ),
+            ),
           ),
         ],
       ),

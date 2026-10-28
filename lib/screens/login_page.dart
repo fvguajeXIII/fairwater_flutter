@@ -75,7 +75,7 @@ class LoginPage extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w800,
-                              color: Colors.white,
+                              color: AppColors.ink,
                               height: 1.1,
                             ),
                           ),
@@ -85,7 +85,7 @@ class LoginPage extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               height: 1.5,
-                              color: Colors.white.withValues(alpha: 0.86),
+                              color: AppColors.slate,
                             ),
                           ),
                           const SizedBox(height: 22),
@@ -94,8 +94,8 @@ class LoginPage extends StatelessWidget {
                             child: ElevatedButton(
                               onPressed: () => _showLogin(context),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: AppColors.deepOcean,
+                                backgroundColor: AppColors.ocean,
+                                foregroundColor: Colors.white,
                               ),
                               child: const Text('Accedi'),
                             ),
@@ -108,7 +108,7 @@ class LoginPage extends StatelessWidget {
                               Text(
                                 'Nuovo su FairWater?',
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.80),
+                                  color: AppColors.slate,
                                 ),
                               ),
                               TextButton(
@@ -117,7 +117,7 @@ class LoginPage extends StatelessWidget {
                                 child: const Text(
                                   'Crea account',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.deepOcean,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
@@ -146,8 +146,6 @@ class _LoginBrandHero extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const WaterBottleBadge(size: 76),
-        const SizedBox(height: 20),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
