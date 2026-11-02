@@ -168,6 +168,9 @@ exports.recordCustomerRefill = onCall({region}, async (request) => {
       throw new HttpsError("already-exists", "Questo refill e gia stato registrato.");
     }
 
+    const customerName = customer.displayName ||
+      [customer.firstName, customer.lastName].filter(Boolean).join(" ") ||
+      "Customer";
     const customerCount = Number(customer.refillCount || 0) + 1;
     const refillerCount = Number(refiller.refillCount || 0) + 1;
     const now = new Date();
@@ -184,20 +187,96 @@ exports.recordCustomerRefill = onCall({region}, async (request) => {
     });
     const event = {
       customerUid,
+      customerName,
       refillerUid: request.auth.uid,
       source: "customer-qr",
+      withPurchase: request.data?.withPurchase === true,
       createdAt: now,
     };
     transaction.create(customerEventRef, event);
     transaction.create(refillerEventRef, event);
 
     return {
-      customerName: customer.displayName || customer.firstName || "Customer",
+      customerName,
       customerRefillCount: customerCount,
       refillerRefillCount: refillerCount,
     };
   });
 });
+
+exports.backfillRefillerRefillEventNames = onCall(
+    {region},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Accesso richiesto.");
+      }
+
+      const db = getFirestore();
+      const refillerRef = db.collection("users").doc(request.auth.uid);
+      const refillerSnapshot = await refillerRef.get();
+      if (!refillerSnapshot.exists) {
+        throw new HttpsError("not-found", "Account Refiller non trovato.");
+      }
+
+      const refiller = refillerSnapshot.data();
+      const roles = Array.isArray(refiller.roles) ? refiller.roles : [];
+      if (!roles.includes("refill_manager") &&
+          refiller.accountType !== "refill_point") {
+        throw new HttpsError("permission-denied", "Permessi Refiller richiesti.");
+      }
+      if (refiller.status !== "active") {
+        throw new HttpsError("permission-denied", "Account Refiller non attivo.");
+      }
+
+      const eventSnapshot = await refillerRef.collection("refill_events").get();
+      const eventsToResolve = eventSnapshot.docs.filter((eventDoc) => {
+        const event = eventDoc.data();
+        const customerName = typeof event.customerName === "string" ?
+          event.customerName.trim() : "";
+        return (!customerName || customerName.toLowerCase() === "customer") &&
+          typeof event.customerUid === "string" &&
+          event.customerUid.length > 0;
+      });
+      if (eventsToResolve.length === 0) {
+        return {updatedCount: 0};
+      }
+
+      const customerIds = [...new Set(eventsToResolve.map(
+          (eventDoc) => eventDoc.data().customerUid,
+      ))];
+      const customerSnapshots = [];
+      for (let index = 0; index < customerIds.length; index += 100) {
+        const customerRefs = customerIds.slice(index, index + 100)
+            .map((customerId) => db.collection("users").doc(customerId));
+        customerSnapshots.push(...await db.getAll(...customerRefs));
+      }
+
+      const customerNames = new Map();
+      for (const customerSnapshot of customerSnapshots) {
+        if (!customerSnapshot.exists) continue;
+        const customer = customerSnapshot.data();
+        const name = customer.displayName ||
+          [customer.firstName, customer.lastName].filter(Boolean).join(" ");
+        if (typeof name === "string" && name.trim()) {
+          customerNames.set(customerSnapshot.id, name.trim());
+        }
+      }
+
+      const updates = eventsToResolve.flatMap((eventDoc) => {
+        const customerName = customerNames.get(eventDoc.data().customerUid);
+        return customerName ? [{eventDoc, customerName}] : [];
+      });
+      for (let index = 0; index < updates.length; index += 450) {
+        const batch = db.batch();
+        for (const {eventDoc, customerName} of updates.slice(index, index + 450)) {
+          batch.update(eventDoc.ref, {customerName});
+        }
+        await batch.commit();
+      }
+
+      return {updatedCount: updates.length};
+    },
+);
 
 exports.createManagedUser = onCall({region}, async (request) => {
   await requireAdmin(request);

@@ -244,6 +244,88 @@ class _HomePageState extends State<HomePage> {
       ProfilePage(),
     ];
 
+    if (MediaQuery.sizeOf(context).width >= 1000) {
+      final extendedRail = MediaQuery.sizeOf(context).width >= 1280;
+
+      return Scaffold(
+        body: Row(
+          children: [
+            SafeArea(
+              child: NavigationRail(
+                extended: extendedRail,
+                minExtendedWidth: 208,
+                labelType: extendedRail
+                    ? NavigationRailLabelType.none
+                    : NavigationRailLabelType.all,
+                backgroundColor: Colors.white,
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (index) {
+                  setState(() => _selectedIndex = index);
+                },
+                leading: Padding(
+                  padding: const EdgeInsets.only(top: 12, bottom: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FloatingActionButton.small(
+                        tooltip: 'Scansiona o inserisci un codice QR',
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => CustomerQrPage(profile: profile),
+                            ),
+                          );
+                        },
+                        child: const Icon(Icons.qr_code_2_rounded),
+                      ),
+                      if (extendedRail) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Scansiona QR',
+                          style: TextStyle(
+                            color: AppColors.slate,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.home_rounded),
+                    label: Text('Home'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.local_drink_rounded),
+                    label: Text('Refill'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.campaign_rounded),
+                    label: Text('Sponsor'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.person_rounded),
+                    label: Text('Profilo'),
+                  ),
+                ],
+              ),
+            ),
+            const VerticalDivider(width: 1, thickness: 1),
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1120),
+                  child: IndexedStack(index: _selectedIndex, children: pages),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       extendBody: true,
       body: IndexedStack(index: _selectedIndex, children: pages),
@@ -1460,7 +1542,7 @@ class _LiveMapCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 420,
+      height: MediaQuery.sizeOf(context).width < 700 ? 320 : 420,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
         color: Colors.white,

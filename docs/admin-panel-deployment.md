@@ -2,7 +2,7 @@
 
 ## Configurazione
 
-Il pannello admin è stato configurato come app Flutter Web e sarà deployato su `admin.fairwater.it` tramite Firebase Hosting.
+Il pannello admin è una web app statica deployata su `admin.fairwater.it` tramite Firebase Hosting.
 
 ## Struttura
 
@@ -11,24 +11,20 @@ Il pannello admin è stato configurato come app Flutter Web e sarà deployato su
   - Contiene la home, login consumer, profilo, mappa bar
 
 - **Pannello Admin**: `admin.fairwater.it` (admin target)
-  - Build: `build/web` (stessa build, gestione rotte da Flutter)
-  - Contiene login admin, dashboard gestione bar
-  - Autenticazione via Firebase Auth con ruoli admin
+  - File: `admin_crm/dist`
+  - Contiene login CRM e dashboard per utenti, punti refill e sponsor
+  - Autenticazione via Firebase Authentication e ruoli in Firestore
 
 ## Accesso al Pannello Admin
 
-1. Navigare a `https://admin.fairwater.it/admin-login`
-2. Effettuare login con credenziali admin
-3. Verifica dei ruoli admin in Firestore
-4. Accesso alla dashboard gestione bar se autorizzato
+1. Navigare a `https://admin.fairwater.it`
+2. Accedere con email e password oppure con Google
+3. Il documento `users/{uid}` deve contenere `admin` o `super_admin` nell'array `roles`
 
-## Build Web
-
-```bash
-flutter build web --release
-```
-
-Output: `build/web/`
+In Firebase Console, abilita i provider **Email/Password** e **Google** in
+Authentication > Sign-in method e autorizza il dominio del pannello in
+Authentication > Settings > Authorized domains. Le password non vanno inserite
+nel codice o nel repository.
 
 ## Deploy su Firebase Hosting
 
@@ -68,41 +64,13 @@ Gli utenti admin devono avere in Firestore (collection: users):
 - `refill_manager`: Gestione punti refill
 - `sponsor_manager`: Gestione sponsor
 
-## Sincronizzazione Real-Time
-
-La dashboard admin utilizza Cloud Firestore Streams per la sincronizzazione real-time:
-
-1. Modifiche nel CRM → salvate in Firestore
-2. Firestore notifica i listener (dashboard e app consumer)
-3. UI aggiornate automaticamente in tempo reale
-
-Non è necessario fare nulla: le modifiche sono sincronizzate istantaneamente.
-
 ## File Coinvolti
 
-- `lib/services/admin_service.dart` - Gestione ruoli e permessi admin
-- `lib/screens/admin_login_page.dart` - Login page per admin
-- `lib/screens/admin_dashboard_page.dart` - Dashboard gestione bar (CRUD)
-- `lib/main.dart` - Routes per admin
+- `admin_crm/dist/index.html` - Interfaccia del pannello e login
+- `admin_crm/dist/app.js` - Firebase Authentication e integrazione Firestore
 - `firebase.json` - Configurazione Firebase Hosting
-
-## Testing Locale
-
-```bash
-# Build web in debug
-flutter build web
-
-# Servire localmente
-cd build/web
-python -m http.server 8000
-
-# Accedere a http://localhost:8000/admin-login
-```
 
 ## Note Importanti
 
-- ✅ Sincronizzazione real-time già implementata via `BarService.watchBars()`
-- ✅ Autenticazione Firebase integrata
-- ✅ CRUD bar completamente funzionale
-- ⚠️ Firestore security rules devono consentire operazioni admin (vedi firestore.rules)
-- ⚠️ Assicurarsi che gli utenti admin abbiano i ruoli corretti in Firestore
+- Firestore Security Rules devono consentire le operazioni assegnate al ruolo (vedi `firestore.rules`).
+- Se credenziali precedentemente inserite nel frontend sono state pubblicate, reimpostale in Firebase Authentication.

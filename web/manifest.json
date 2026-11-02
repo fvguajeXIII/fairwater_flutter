@@ -1,12 +1,12 @@
 {
-    "name": "fairwater",
-    "short_name": "fairwater",
+    "name": "FairWater",
+    "short_name": "FairWater",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#F7FAFF",
+    "theme_color": "#195BAA",
+    "description": "Trova i punti refill FairWater e monitora il tuo impatto.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

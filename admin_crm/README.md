@@ -10,27 +10,28 @@ Separare il CRM dal sito pubblico e dall'app consumer:
 - `admin.fairwater.it` ospita il CRM
 - entrambi possono convivere nello stesso progetto Firebase
 
-## Stato attuale
+## Accesso e autorizzazioni
 
-In questa fase e presente una shell web statica deployabile su Firebase Hosting.
-Serve per:
+- Il pannello usa Firebase Authentication con provider email/password e Google.
+- L'utente deve esistere in Firebase Authentication e avere un documento
+  `users/{uid}` in Firestore con `roles` contenente `admin` o `super_admin`.
+- Abilita i provider email/password e Google in Firebase Console >
+  Authentication > Sign-in method.
+- Aggiungi i domini di Hosting in Authentication > Settings > Authorized
+  domains.
 
-- occupare il sottodominio admin senza toccare il sito pubblico
-- validare DNS, SSL e deploy
-- preparare la struttura UI del CRM
+Le password non devono essere salvate nel codice. Se credenziali precedentemente
+inserite nel frontend sono state pubblicate, reimpostale in Firebase
+Authentication.
 
-## Evoluzione consigliata
+## Deploy
 
-Step successivo:
+Il frontend statico si trova in `dist/` ed è configurato sul target Firebase
+Hosting `admin`.
 
-1. sostituire questa shell con una web app Flutter o con un frontend admin piu ricco
-2. collegare Firebase Auth
-3. collegare Firestore per:
-   - utenti
-   - refill point
-   - sponsor
-   - inviti
-4. applicare i ruoli `admin`, `refill_manager`, `sponsor_manager`
+```bash
+firebase deploy --only hosting:admin
+```
 
 ## Cartelle
 

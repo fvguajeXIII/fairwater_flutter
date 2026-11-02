@@ -24,20 +24,20 @@
         <div class="login-copy">
           <h2>Accedi al pannello amministrativo</h2>
           <p>
-            Inserisci le credenziali CRM per gestire sponsor e punti refill
-            collegati all'app.
+            Accedi con il tuo account Firebase autorizzato per gestire utenti,
+            sponsor e punti refill.
           </p>
         </div>
 
         <form class="login-form" id="login-form">
           <label class="field">
-            <span>Username</span>
+            <span>Email</span>
             <input
-              id="username"
-              name="username"
-              type="text"
+              id="email"
+              name="email"
+              type="email"
               autocomplete="username"
-              placeholder="Inserisci username"
+              placeholder="Inserisci email"
               required
             />
           </label>
@@ -58,6 +58,13 @@
 
           <button class="login-button" type="submit">Entra nel CRM</button>
         </form>
+        <button
+          class="google-auth-button"
+          id="google-login-button"
+          type="button"
+        >
+          Accedi con Google
+        </button>
       </div>
     </div>
 
