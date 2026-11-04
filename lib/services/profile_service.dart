@@ -18,6 +18,24 @@ class ProfileService {
     });
   }
 
+  Stream<List<FairWaterRefillEvent>> watchRefillerRefills(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('refill_events')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(FairWaterRefillEvent.fromSnapshot)
+              .toList(growable: false),
+        );
+  }
+
+  Future<void> backfillRefillEventCustomerNames() async {
+    await _functions.httpsCallable('backfillRefillerRefillEventNames').call();
+  }
+
   Stream<FairWaterCommunityStats> watchCommunityStats() {
     return _firestore.collection('users').snapshots().map((snapshot) {
       return FairWaterCommunityStats.fromUsers(snapshot.docs);
@@ -32,9 +50,13 @@ class ProfileService {
     });
   }
 
-  Future<RecordedRefill> recordCustomerRefill(String qrPayload) async {
+  Future<RecordedRefill> recordCustomerRefill(
+    String qrPayload, {
+    bool withPurchase = false,
+  }) async {
     final result = await _functions.httpsCallable('recordCustomerRefill').call({
       'qrPayload': qrPayload,
+      'withPurchase': withPurchase,
     });
     final data = Map<String, dynamic>.from(result.data as Map);
     return RecordedRefill(
@@ -177,6 +199,35 @@ class RecordedRefill {
   final String customerName;
   final int customerRefillCount;
   final int refillerRefillCount;
+}
+
+class FairWaterRefillEvent {
+  const FairWaterRefillEvent({
+    required this.customerName,
+    required this.withPurchase,
+    required this.createdAt,
+  });
+
+  factory FairWaterRefillEvent.fromSnapshot(
+    QueryDocumentSnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    final data = snapshot.data();
+    final createdAt = data['createdAt'];
+
+    return FairWaterRefillEvent(
+      customerName: (data['customerName'] as String? ?? '').trim(),
+      withPurchase: data['withPurchase'] as bool?,
+      createdAt: createdAt is Timestamp
+          ? createdAt.toDate()
+          : createdAt is DateTime
+          ? createdAt
+          : null,
+    );
+  }
+
+  final String customerName;
+  final bool? withPurchase;
+  final DateTime? createdAt;
 }
 
 class FairWaterCommunityStats {

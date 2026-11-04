@@ -475,6 +475,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Widget build(BuildContext context) {
     final isLastStep = _step == _stepCount - 1;
     final content = SafeArea(
+<<<<<<< HEAD
       child: Column(
         children: [
           Padding(
@@ -488,95 +489,145 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     icon: const Icon(
                       Icons.arrow_back_rounded,
                       color: AppColors.deepOcean,
+=======
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                child: Row(
+                  children: [
+                    if (_step > 0)
+                      IconButton(
+                        tooltip: 'Indietro',
+                        onPressed: _submitting ? null : _back,
+                        icon: Icon(
+                          Icons.arrow_back_rounded,
+                          color: AppColors.deepOcean,
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 48),
+                    const Spacer(),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (value) => setState(() => _step = value),
+                  children: [
+                    const _IntroStep(),
+                    const _ImpactStep(),
+                    _IdentityStep(
+                      formKey: _formKeys[0],
+                      firstName: _firstName,
+                      lastName: _lastName,
+>>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
                     ),
-                  )
-                else
-                  const SizedBox(width: 48),
-                const Spacer(),
-              ],
-            ),
-          ),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              onPageChanged: (value) => setState(() => _step = value),
-              children: [
-                const _IntroStep(),
-                const _ImpactStep(),
-                _IdentityStep(
-                  formKey: _formKeys[0],
-                  firstName: _firstName,
-                  lastName: _lastName,
+                    _DetailsStep(
+                      formKey: _formKeys[1],
+                      residence: _residence,
+                      addressSearchController: _addressSearchController,
+                      phone: _phone,
+                      referral: _referral,
+                      addressResults: _addressResults,
+                      isSearchingAddress: _isSearchingAddress,
+                      addressSearchError: _addressSearchError,
+                      selectedAddress: _selectedAddress,
+                      onSelectAddress: _selectAddressSuggestion,
+                    ),
+                    _AccountStep(
+                      formKey: _formKeys[2],
+                      email: _email,
+                      password: _password,
+                      confirmPassword: _confirmPassword,
+                      obscurePassword: _obscurePassword,
+                      acceptedTerms: _acceptedTerms,
+                      selectedPhotoBytes: _selectedProfileImageBytes,
+                      selectedPhotoName: _selectedProfileImage?.name,
+                      birthDate: _birthDate,
+                      onPickBirthDate: () => _pickBirthDate(context),
+                      onTogglePassword: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                      onTermsChanged: (value) =>
+                          setState(() => _acceptedTerms = value ?? false),
+                      onPickPhoto: _pickProfilePhoto,
+                    ),
+                    _CompletionStep(
+                      uid: _createdProfileUid,
+                      fullName: _createdProfileName,
+                      email: _createdProfileEmail,
+                      residence: _createdProfileResidence,
+                      phone: _createdProfilePhone,
+                      emailConfirmed: _emailConfirmed,
+                      emailVerificationSent: _emailVerificationSent,
+                      onEmailConfirmedChanged: (value) =>
+                          setState(() => _emailConfirmed = value ?? false),
+                      onConfirmEmail: _confirmEmail,
+                      onAddToWallet: _addToWallet,
+                      onFinish: _finishOnboarding,
+                    ),
+                  ],
                 ),
-                _DetailsStep(
-                  formKey: _formKeys[1],
-                  residence: _residence,
-                  addressSearchController: _addressSearchController,
-                  phone: _phone,
-                  referral: _referral,
-                  addressResults: _addressResults,
-                  isSearchingAddress: _isSearchingAddress,
-                  addressSearchError: _addressSearchError,
-                  selectedAddress: _selectedAddress,
-                  onSelectAddress: _selectAddressSuggestion,
-                ),
-                _AccountStep(
-                  formKey: _formKeys[2],
-                  email: _email,
-                  password: _password,
-                  confirmPassword: _confirmPassword,
-                  obscurePassword: _obscurePassword,
-                  acceptedTerms: _acceptedTerms,
-                  selectedPhotoBytes: _selectedProfileImageBytes,
-                  selectedPhotoName: _selectedProfileImage?.name,
-                  birthDate: _birthDate,
-                  onPickBirthDate: () => _pickBirthDate(context),
-                  onTogglePassword: () =>
-                      setState(() => _obscurePassword = !_obscurePassword),
-                  onTermsChanged: (value) =>
-                      setState(() => _acceptedTerms = value ?? false),
-                  onPickPhoto: _pickProfilePhoto,
-                ),
-                _CompletionStep(
-                  uid: _createdProfileUid,
-                  fullName: _createdProfileName,
-                  email: _createdProfileEmail,
-                  residence: _createdProfileResidence,
-                  phone: _createdProfilePhone,
-                  emailConfirmed: _emailConfirmed,
-                  emailVerificationSent: _emailVerificationSent,
-                  onEmailConfirmedChanged: (value) =>
-                      setState(() => _emailConfirmed = value ?? false),
-                  onConfirmEmail: _confirmEmail,
-                  onAddToWallet: _addToWallet,
-                  onFinish: _finishOnboarding,
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-            child: Column(
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed:
-                        _submitting ||
-                            (isLastStep &&
-                                !_completionConfirmed &&
-                                !_emailVerificationPressed)
-                        ? null
-                        : _next,
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed:
+                            _submitting ||
+                                (isLastStep &&
+                                    !_completionConfirmed &&
+                                    !_emailVerificationPressed)
+                            ? null
+                            : _next,
+                        child: _submitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(isLastStep ? 'Vai all’app' : 'Continua'),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextButton(
+                      onPressed: _submitting ? null : _openLogin,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.deepOcean,
+                      ),
+                      child: const Text('Ho già un account'),
+                    ),
+                    const SizedBox(height: 4),
+                    Semantics(
+                      label: 'Pagina ${_step + 1} di $_stepCount',
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          _stepCount,
+                          (index) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOut,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: index == _step ? 18 : 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: AppColors.ocean.withValues(
+                                alpha: index == _step ? 1 : 0.25,
+                              ),
+                              borderRadius: BorderRadius.circular(99),
                             ),
+<<<<<<< HEAD
                           )
                         : Text(isLastStep ? 'Vai all’app' : 'Continua'),
                   ),
@@ -605,17 +656,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         decoration: BoxDecoration(
                           color: AppColors.ocean.withValues(
                             alpha: index == _step ? 1 : 0.35,
+=======
+>>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
                           ),
-                          borderRadius: BorderRadius.circular(99),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
 
@@ -634,11 +686,19 @@ class _StepShell extends StatelessWidget {
     required this.title,
     required this.body,
     required this.child,
+<<<<<<< HEAD
+=======
+    this.showCard = true,
+>>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
   });
   final String eyebrow;
   final String title;
   final String body;
   final Widget child;
+<<<<<<< HEAD
+=======
+  final bool showCard;
+>>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
@@ -648,7 +708,11 @@ class _StepShell extends StatelessWidget {
       children: [
         Text(
           eyebrow.toUpperCase(),
+<<<<<<< HEAD
           style: TextStyle(
+=======
+          style: const TextStyle(
+>>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
             color: AppColors.ocean,
             fontSize: 12,
             fontWeight: FontWeight.w900,
@@ -656,12 +720,16 @@ class _StepShell extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
+<<<<<<< HEAD
         Text(
           title,
           style: Theme.of(
             context,
           ).textTheme.headlineLarge?.copyWith(color: AppColors.ink),
         ),
+=======
+        Text(title, style: Theme.of(context).textTheme.headlineLarge),
+>>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
         const SizedBox(height: 12),
         Text(
           body,
@@ -670,7 +738,18 @@ class _StepShell extends StatelessWidget {
           ).textTheme.bodyLarge?.copyWith(color: AppColors.slate),
         ),
         const SizedBox(height: 30),
-        child,
+        if (showCard)
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: child,
+          )
+        else
+          child,
       ],
     ),
   );
@@ -684,6 +763,10 @@ class _IntroStep extends StatelessWidget {
     title: 'Da oggi la tua acqua\nla offre il bar.',
     body:
         'Riempi la borraccia nei bar partner, accumula punti e trasforma ogni refill in acqua potabile per chi non ne ha.',
+<<<<<<< HEAD
+=======
+    showCard: false,
+>>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
     child: const SizedBox.shrink(),
   );
 }

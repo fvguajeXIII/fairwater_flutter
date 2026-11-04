@@ -6,11 +6,37 @@ import '../services/profile_service.dart';
 import '../theme/app_theme.dart';
 import 'qr_scanner_page.dart';
 
-class RefillerHomePage extends StatelessWidget {
-  RefillerHomePage({super.key});
+class RefillerHomePage extends StatefulWidget {
+  const RefillerHomePage({super.key});
 
+  @override
+  State<RefillerHomePage> createState() => _RefillerHomePageState();
+}
+
+class _RefillerHomePageState extends State<RefillerHomePage> {
   final ProfileService _profiles = ProfileService();
   final AuthService _auth = AuthService();
+  String? _refillNameBackfillError;
+
+  @override
+  void initState() {
+    super.initState();
+    _backfillRefillEventCustomerNames();
+  }
+
+  Future<void> _backfillRefillEventCustomerNames() async {
+    if (_auth.currentUser == null) return;
+
+    try {
+      await _profiles.backfillRefillEventCustomerNames();
+    } on FirebaseFunctionsException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _refillNameBackfillError =
+            error.message ?? 'Impossibile recuperare i nomi dei clienti.';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +144,70 @@ class RefillerHomePage extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: AppDecorations.glassCard(radius: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Storico refill',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.deepOcean,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (_refillNameBackfillError case final error?)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              'Impossibile recuperare alcuni nomi: $error',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                          ),
+                        StreamBuilder<List<FairWaterRefillEvent>>(
+                          stream: _profiles.watchRefillerRefills(user.uid),
+                          builder: (context, eventsSnapshot) {
+                            if (eventsSnapshot.hasError) {
+                              return const Text(
+                                'Impossibile caricare lo storico dei refill.',
+                              );
+                            }
+                            if (!eventsSnapshot.hasData) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            final events = eventsSnapshot.data!;
+                            if (events.isEmpty) {
+                              return const Text(
+                                'Nessun refill registrato per ora.',
+                              );
+                            }
+
+                            return Column(
+                              children: [
+                                for (
+                                  var index = 0;
+                                  index < events.length;
+                                  index++
+                                ) ...[
+                                  if (index > 0) const Divider(height: 16),
+                                  _RefillHistoryTile(event: events[index]),
+                                ],
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: AppDecorations.glassCard(radius: 24),
                     child: const Row(
                       children: [
                         Icon(
@@ -148,12 +238,38 @@ class RefillerHomePage extends StatelessWidget {
   }
 
   Future<void> _scan(BuildContext context) async {
+    final withPurchase = await showDialog<bool>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Tipo di refill', textAlign: TextAlign.center),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const ListTile(
+              leading: Icon(Icons.local_cafe_rounded),
+              title: Text('Refill con consumazione'),
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const ListTile(
+              leading: Icon(Icons.water_drop_rounded),
+              title: Text('Refill senza consumazione'),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (!context.mounted || withPurchase == null) return;
     final payload = await Navigator.of(
       context,
     ).push<String>(MaterialPageRoute(builder: (_) => const QrScannerPage()));
     if (!context.mounted || payload == null) return;
     try {
-      final result = await _profiles.recordCustomerRefill(payload);
+      final result = await _profiles.recordCustomerRefill(
+        payload,
+        withPurchase: withPurchase,
+      );
       if (!context.mounted) return;
       await showDialog<void>(
         context: context,
@@ -182,5 +298,49 @@ class RefillerHomePage extends StatelessWidget {
         SnackBar(content: Text(error.message ?? 'QR non valido.')),
       );
     }
+  }
+}
+
+class _RefillHistoryTile extends StatelessWidget {
+  const _RefillHistoryTile({required this.event});
+
+  final FairWaterRefillEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    final purchaseLabel = switch (event.withPurchase) {
+      true => 'Con consumazione',
+      false => 'Senza consumazione',
+      null => 'Tipo non disponibile',
+    };
+    final refillDate = event.createdAt;
+    final dateLabel = refillDate == null
+        ? 'Data non disponibile'
+        : '${refillDate.toLocal().day.toString().padLeft(2, '0')}/'
+              '${refillDate.toLocal().month.toString().padLeft(2, '0')}/'
+              '${refillDate.toLocal().year} '
+              '${refillDate.toLocal().hour.toString().padLeft(2, '0')}:'
+              '${refillDate.toLocal().minute.toString().padLeft(2, '0')}';
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const CircleAvatar(
+        backgroundColor: AppColors.mist,
+        child: Icon(Icons.person_outline_rounded, color: AppColors.deepOcean),
+      ),
+      title: Text(
+        event.customerName.isEmpty
+            ? 'Cliente non disponibile'
+            : event.customerName,
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text('$purchaseLabel • $dateLabel'),
+      trailing: Icon(
+        event.withPurchase == true
+            ? Icons.local_cafe_rounded
+            : Icons.water_drop_rounded,
+        color: AppColors.ocean,
+      ),
+    );
   }
 }

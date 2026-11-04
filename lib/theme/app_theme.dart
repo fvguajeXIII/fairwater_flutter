@@ -189,6 +189,79 @@ class AppDecorations {
   }
 }
 
+class WaterPatternBackground extends StatelessWidget {
+  const WaterPatternBackground({super.key});
+
+  @override
+  Widget build(BuildContext context) => const DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFE9FAFF), Color(0xFFBDECF5), Color(0xFF91D8E8)],
+      ),
+    ),
+    child: CustomPaint(painter: _WaterPatternPainter()),
+  );
+}
+
+class _WaterPatternPainter extends CustomPainter {
+  const _WaterPatternPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var row = 0; row < 16; row++) {
+      final y = row * 48.0 + 12;
+      final path = Path()
+        ..moveTo(0, y)
+        ..cubicTo(
+          size.width * 0.24,
+          y - 18,
+          size.width * 0.30,
+          y + 18,
+          size.width * 0.52,
+          y,
+        )
+        ..cubicTo(
+          size.width * 0.72,
+          y - 16,
+          size.width * 0.82,
+          y + 16,
+          size.width,
+          y - 2,
+        );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = AppColors.ocean.withValues(alpha: row.isEven ? 0.11 : 0.07)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = row.isEven ? 2 : 1,
+      );
+    }
+
+    final bubblePaint = Paint()..style = PaintingStyle.stroke;
+    for (final bubble in const [
+      (0.12, 0.18, 8.0),
+      (0.82, 0.12, 12.0),
+      (0.90, 0.42, 6.0),
+      (0.08, 0.68, 11.0),
+      (0.76, 0.82, 7.0),
+    ]) {
+      bubblePaint
+        ..color = Colors.white.withValues(alpha: 0.48)
+        ..strokeWidth = 2;
+      canvas.drawCircle(
+        Offset(size.width * bubble.$1, size.height * bubble.$2),
+        bubble.$3,
+        bubblePaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WaterPatternPainter oldDelegate) => false;
+}
+
 class WaterBottleBadge extends StatelessWidget {
   const WaterBottleBadge({super.key, this.size = 84, this.showGlow = true});
 

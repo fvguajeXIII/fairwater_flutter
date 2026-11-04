@@ -43,9 +43,6 @@ const userAdminAuth = getAuth(userAdminApp);
 const userAdminDb = getFirestore(userAdminApp);
 const userAdminFunctions = getFunctions(userAdminApp, "europe-west1");
 
-const LOGIN_USERNAME = "FairWater";
-const LOGIN_PASSWORD = "FairWater2026!";
-const LOGIN_STORAGE_KEY = "fairwater-admin-auth";
 const googleAdminProvider = new GoogleAuthProvider();
 googleAdminProvider.setCustomParameters({ prompt: "select_account" });
 
@@ -76,6 +73,7 @@ const titleNode = document.getElementById("view-title");
 const loginShell = document.getElementById("login-shell");
 const loginForm = document.getElementById("login-form");
 const loginError = document.getElementById("login-error");
+const googleLoginButton = document.getElementById("google-login-button");
 const logoutButton = document.getElementById("logout-button");
 const dataStatus = document.getElementById("data-status");
 const userAdminAuthForm = document.getElementById("user-admin-auth-form");
@@ -101,18 +99,14 @@ function unlockAdmin(user) {
     loginShell.classList.add("is-hidden");
   }
   document.body.classList.remove("crm-login-open");
-  window.sessionStorage.setItem(LOGIN_STORAGE_KEY, "ok");
-  setStatus(`Accesso CRM attivo: ${user?.email ?? "FairWater"}`, "success");
+  setStatus(`Accesso CRM attivo: ${user?.email ?? "account Firebase"}`, "success");
 }
 
-function lockAdmin({ clearSession = true } = {}) {
+function lockAdmin() {
   if (loginShell) {
     loginShell.classList.remove("is-hidden");
   }
   document.body.classList.add("crm-login-open");
-  if (clearSession) {
-    window.sessionStorage.removeItem(LOGIN_STORAGE_KEY);
-  }
   stopDataSync();
   resetState();
 }
@@ -539,7 +533,7 @@ async function checkAdminAccess(user, database = db) {
     const snapshot = await getDoc(doc(database, "users", user.uid));
     const data = snapshot.data() ?? {};
     const roles = Array.isArray(data.roles) ? data.roles : [];
-    const isAdmin = roles.includes("admin");
+    const isAdmin = roles.includes("admin") || roles.includes("super_admin");
 
     if (!snapshot.exists()) {
       appendStatus(
@@ -997,14 +991,13 @@ if (loginForm) {
     event.preventDefault();
 
     const formData = new FormData(loginForm);
-    const username = String(formData.get("username") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
 
-    if (username !== LOGIN_USERNAME || password !== LOGIN_PASSWORD) {
+    if (!email || !password) {
       if (loginError) {
-        loginError.textContent = "Credenziali non corrette.";
+        loginError.textContent = "Inserisci email e password.";
       }
-      lockAdmin();
       return;
     }
 
@@ -1012,12 +1005,37 @@ if (loginForm) {
       if (loginError) {
         loginError.textContent = "";
       }
-      window.sessionStorage.setItem(LOGIN_STORAGE_KEY, "ok");
-      unlockAdmin({ email: "FairWater" });
-      appendStatus("Accesso CRM confermato. Sincronizzazione dati in corso...");
-      await startDataSync({ email: "FairWater CRM", isAnonymous: true });
+      setStatus("Autenticazione Firebase in corso...");
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-      appendStatus(`Errore avvio CRM base: ${error.message}`, "error");
+      if (loginError) {
+        loginError.textContent =
+          error?.code === "auth/invalid-credential" ||
+          error?.code === "auth/user-not-found" ||
+          error?.code === "auth/wrong-password"
+            ? "Email o password non corrette."
+            : error?.code === "auth/operation-not-allowed"
+              ? "L'accesso email/password non è abilitato in Firebase Authentication."
+              : error?.message ?? "Errore durante l'accesso Firebase.";
+      }
+      setStatus("Accesso Firebase non riuscito.", "error");
+    }
+  });
+}
+
+if (googleLoginButton) {
+  googleLoginButton.addEventListener("click", async () => {
+    try {
+      if (loginError) {
+        loginError.textContent = "";
+      }
+      setStatus("Accesso Google Firebase in corso...");
+      await signInWithPopup(auth, googleAdminProvider);
+    } catch (error) {
+      if (loginError) {
+        loginError.textContent = firebaseAdminAuthMessage(error);
+      }
+      setStatus("Accesso Google non riuscito.", "error");
     }
   });
 }
@@ -1082,9 +1100,11 @@ if (userAdminGoogleButton) {
 
 if (logoutButton) {
   logoutButton.addEventListener("click", async () => {
-    window.sessionStorage.removeItem(LOGIN_STORAGE_KEY);
-    await signOut(userAdminAuth).catch(() => {});
-    await signOut(auth);
+    try {
+      await Promise.all([signOut(userAdminAuth), signOut(auth)]);
+    } catch (error) {
+      setStatus(`Errore durante la disconnessione: ${error.message}`, "error");
+    }
   });
 }
 
@@ -1145,19 +1165,28 @@ document.addEventListener("click", (event) => {
 
 setView("dashboard");
 
-onAuthStateChanged(auth, (user) => {
-  const crmSessionActive =
-    window.sessionStorage.getItem(LOGIN_STORAGE_KEY) === "ok";
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    const hasAdminAccess = await checkAdminAccess(user);
+    if (!hasAdminAccess) {
+      lockAdmin();
+      if (loginError) {
+        loginError.textContent =
+          "Account autenticato, ma non autorizzato. Il profilo Firestore deve avere il ruolo admin o super_admin.";
+      }
+      await signOut(auth);
+      return;
+    }
 
-  if (crmSessionActive) {
-    unlockAdmin({ email: "FairWater" });
-    appendStatus("Ripristino sessione CRM. Sincronizzazione dati in corso...");
-    startDataSync({ email: "FairWater CRM", isAnonymous: true });
+    if (loginError) {
+      loginError.textContent = "";
+    }
+    startDataSync(user);
     return;
   }
 
-  lockAdmin({ clearSession: false });
-  setStatus("Sessione CRM chiusa.");
+  lockAdmin();
+  setStatus("Sessione Firebase chiusa.");
 });
 
 onAuthStateChanged(userAdminAuth, (user) => {

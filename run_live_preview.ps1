@@ -86,7 +86,7 @@ try {
             $lastChange = [datetime]::MinValue
         }
 
-        if ([Console]::KeyAvailable) {
+        if (-not [Console]::IsInputRedirected -and [Console]::KeyAvailable) {
             $key = [Console]::ReadKey($true)
             if ($key.KeyChar -eq 'q') {
                 $process.StandardInput.WriteLine('q')

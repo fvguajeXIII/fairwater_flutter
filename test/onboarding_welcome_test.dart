@@ -5,7 +5,11 @@ import 'package:fairwater/screens/onboarding_page.dart';
 import 'package:fairwater/theme/app_theme.dart';
 
 void main() {
+<<<<<<< HEAD
   testWidgets('Welcome screen uses the shared water pattern', (
+=======
+  testWidgets('Welcome screen uses the login water pattern', (
+>>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
     WidgetTester tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -20,6 +24,10 @@ void main() {
     );
 
     expect(find.byType(WaterPatternBackground), findsOneWidget);
+<<<<<<< HEAD
+=======
+    expect(find.byKey(const Key('welcome-bottle-image')), findsNothing);
+>>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
     expect(find.byKey(const Key('welcome-contrast-overlay')), findsNothing);
 
     final title = tester.widget<Text>(
@@ -33,5 +41,33 @@ void main() {
     expect(find.text('Da oggi la tua acqua\nla offre il bar.'), findsNothing);
     expect(find.text("Come bere un bicchiere d'acqua."), findsOneWidget);
     expect(find.byType(WaterPatternBackground), findsOneWidget);
+<<<<<<< HEAD
+=======
+    expect(find.byKey(const Key('welcome-bottle-image')), findsNothing);
+  });
+
+  testWidgets('Registration steps use the login water pattern', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        home: const OnboardingPage(),
+      ),
+    );
+
+    await tester.tap(find.text('Continua'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continua'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(WaterPatternBackground), findsOneWidget);
+    expect(find.byKey(const Key('welcome-bottle-image')), findsNothing);
+    expect(find.text('Come ti chiami?'), findsOneWidget);
+>>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
   });
 }

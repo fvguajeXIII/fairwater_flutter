@@ -16,11 +16,14 @@ class AuthService {
   }) : _auth = auth ?? FirebaseAuth.instance,
        _firestore = firestore ?? FirebaseFirestore.instance,
        _googleSignIn =
-           googleSignIn ?? GoogleSignIn(serverClientId: _googleServerClientId);
+           googleSignIn ??
+           (kIsWeb
+               ? null
+               : GoogleSignIn(serverClientId: _googleServerClientId));
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
-  final GoogleSignIn _googleSignIn;
+  final GoogleSignIn? _googleSignIn;
 
   Stream<User?> authStateChanges() => _auth.authStateChanges();
 
@@ -127,11 +130,18 @@ class AuthService {
     }
 
     try {
+      final googleSignIn = _googleSignIn;
+      if (googleSignIn == null) {
+        throw StateError(
+          'Google Sign-In non e configurato per questa piattaforma.',
+        );
+      }
+
       _logGoogleSignIn('Avvio login Google su Android/iOS.');
       _logGoogleSignIn(
         'Configurazione GoogleSignIn: serverClientId=$_googleServerClientId',
       );
-      final googleUser = await _googleSignIn.signIn();
+      final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         _logGoogleSignIn('Login Google annullato dall utente prima del token.');
         throw FirebaseAuthException(
@@ -207,7 +217,13 @@ class AuthService {
 
   Future<void> signOut() async {
     if (!kIsWeb) {
-      await _googleSignIn.signOut();
+      final googleSignIn = _googleSignIn;
+      if (googleSignIn == null) {
+        throw StateError(
+          'Google Sign-In non e configurato per questa piattaforma.',
+        );
+      }
+      await googleSignIn.signOut();
     }
     await _auth.signOut();
   }

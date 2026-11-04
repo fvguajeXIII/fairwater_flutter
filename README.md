@@ -6,6 +6,31 @@ A new Flutter project.
 
 This project is a starting point for a Flutter application.
 
+## Web app
+
+L'app Flutter supporta browser desktop e mobile. Per avviarla localmente in
+Chrome:
+
+```powershell
+flutter run -d chrome
+```
+
+Per creare la versione pronta alla pubblicazione su Firebase Hosting:
+
+```powershell
+flutter build web --release --base-href=/webapp/
+firebase deploy --only hosting:public
+```
+
+La build viene generata in `build/web`; il target `public` pubblica l'app
+FairWater e non il pannello admin. Per pubblicarla nel percorso del sito
+`https://www.fairwater.it/webapp`, usa `flutter build web --release
+--base-href=/webapp/`; il sito Vercel inoltra quella route al target Firebase.
+Per il login Google, aggiungi il dominio web a quelli autorizzati in Firebase
+Authentication. Il browser richiede il permesso di posizione; la scansione QR
+usa il codice stampato invece della fotocamera. Biometria e notifiche push
+mobile non sono disponibili sul web.
+
 ## Firebase login
 
 L'app usa ora Firebase Authentication per login/registrazione e Cloud Firestore
