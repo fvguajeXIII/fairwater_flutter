@@ -487,7 +487,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     onPressed: _submitting ? null : _back,
                     icon: const Icon(
                       Icons.arrow_back_rounded,
-                      color: Colors.white,
+                      color: AppColors.deepOcean,
                     ),
                   )
                 else
@@ -584,7 +584,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 const SizedBox(height: 4),
                 TextButton(
                   onPressed: _submitting ? null : _openLogin,
-                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.deepOcean,
+                  ),
                   child: const Text('Ho già un account'),
                 ),
                 const SizedBox(height: 4),
@@ -601,8 +603,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         width: index == _step ? 18 : 7,
                         height: 7,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(
-                            alpha: index == _step ? 1 : 0.48,
+                          color: AppColors.ocean.withValues(
+                            alpha: index == _step ? 1 : 0.35,
                           ),
                           borderRadius: BorderRadius.circular(99),
                         ),
@@ -620,34 +622,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
-        children: [
-          Semantics(
-            image: true,
-            label: 'Borraccia FairWater con QR code',
-            child: Image.asset(
-              'assets/welcome_bottle.jpeg',
-              key: const Key('welcome-bottle-image'),
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-            ),
-          ),
-          const DecoratedBox(
-            key: Key('welcome-contrast-overlay'),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xC7001424),
-                  Color(0x73001424),
-                  Color(0xC7001424),
-                ],
-                stops: [0, 0.52, 1],
-              ),
-            ),
-          ),
-          content,
-        ],
+        children: [const WaterPatternBackground(), content],
       ),
     );
   }
@@ -659,13 +634,11 @@ class _StepShell extends StatelessWidget {
     required this.title,
     required this.body,
     required this.child,
-    this.onImageBackground = true,
   });
   final String eyebrow;
   final String title;
   final String body;
   final Widget child;
-  final bool onImageBackground;
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
@@ -676,39 +649,25 @@ class _StepShell extends StatelessWidget {
         Text(
           eyebrow.toUpperCase(),
           style: TextStyle(
-            color: onImageBackground
-                ? const Color(0xFFB9E1FF)
-                : AppColors.ocean,
+            color: AppColors.ocean,
             fontSize: 12,
             fontWeight: FontWeight.w900,
             letterSpacing: 1.1,
-            shadows: onImageBackground
-                ? const [Shadow(color: Colors.black87, blurRadius: 10)]
-                : null,
           ),
         ),
         const SizedBox(height: 10),
         Text(
           title,
-          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-            color: onImageBackground ? Colors.white : null,
-            shadows: onImageBackground
-                ? const [Shadow(color: Colors.black87, blurRadius: 14)]
-                : null,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineLarge?.copyWith(color: AppColors.ink),
         ),
         const SizedBox(height: 12),
         Text(
           body,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: onImageBackground
-                ? Colors.white.withValues(alpha: 0.94)
-                : AppColors.slate,
-            fontWeight: onImageBackground ? FontWeight.w600 : null,
-            shadows: onImageBackground
-                ? const [Shadow(color: Colors.black87, blurRadius: 10)]
-                : null,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(color: AppColors.slate),
         ),
         const SizedBox(height: 30),
         child,
@@ -725,7 +684,6 @@ class _IntroStep extends StatelessWidget {
     title: 'Da oggi la tua acqua\nla offre il bar.',
     body:
         'Riempi la borraccia nei bar partner, accumula punti e trasforma ogni refill in acqua potabile per chi non ne ha.',
-    onImageBackground: true,
     child: const SizedBox.shrink(),
   );
 }
