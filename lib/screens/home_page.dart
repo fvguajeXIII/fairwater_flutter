@@ -1048,11 +1048,6 @@ class _SponsorCard extends StatelessWidget {
                       icon: Icons.location_on_outlined,
                       text: sponsor.address,
                     ),
-                    const SizedBox(height: 6),
-                    _RefillDetailRow(
-                      icon: Icons.favorite_outline_rounded,
-                      text: sponsor.contribution,
-                    ),
                   ],
                 ),
               ),
@@ -1239,6 +1234,10 @@ class _RefillDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Un dato vuoto (per esempio uno sponsor senza indirizzo) non lascia una riga orfana.
+    if (text.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
