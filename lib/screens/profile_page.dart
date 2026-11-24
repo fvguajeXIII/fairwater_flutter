@@ -94,16 +94,14 @@ class ProfilePage extends StatelessWidget {
                                   primaryMetric: _MetricView(
                                     label: 'Refill completati',
                                     value: '${profile.refillCount}',
-                                    helper:
-                                        'Bottiglie evitate: ${profile.refillCount}',
+                                    helper: '',
                                     icon: Icons.local_drink_rounded,
                                   ),
                                   secondaryMetric: _MetricView(
                                     label: 'Plastica risparmiata',
                                     value:
                                         '${profile.plasticSavedKg.toStringAsFixed(profile.plasticSavedKg >= 10 ? 0 : 1)} kg',
-                                    helper:
-                                        'Stima: 25 g per ogni refill completato',
+                                    helper: '',
                                     icon: Icons.eco_rounded,
                                   ),
                                   actions: [
@@ -1079,15 +1077,17 @@ class _MetricTile extends StatelessWidget {
               color: _kProfileInk,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            metric.helper,
-            style: TextStyle(
-              fontSize: 12,
-              height: 1.4,
-              color: Colors.blueGrey.shade600,
+          if (metric.helper.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              metric.helper,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.4,
+                color: Colors.blueGrey.shade600,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
