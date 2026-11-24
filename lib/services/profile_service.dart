@@ -66,6 +66,27 @@ class ProfileService {
     );
   }
 
+  // Aggiorna solo i dati che l'utente può cambiare da solo. Ruoli, refill e
+  // date restano fuori: le regole di Firestore rifiuterebbero comunque la modifica.
+  Future<void> updateProfileDetails({
+    required String uid,
+    required String firstName,
+    required String lastName,
+    required String phone,
+    required String residence,
+  }) {
+    final first = firstName.trim();
+    final last = lastName.trim();
+    return _firestore.collection('users').doc(uid).set({
+      'firstName': first,
+      'lastName': last,
+      'displayName': '$first $last'.trim(),
+      'phone': phone.trim(),
+      'residence': residence.trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
   Future<void> updateProfileImage({
     required String uid,
     required String photoBase64,

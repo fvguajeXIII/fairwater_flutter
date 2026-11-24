@@ -82,7 +82,10 @@ class ProfilePage extends StatelessWidget {
                                   onEditPhoto: () => _pickProfileImage(context),
                                 ),
                                 const SizedBox(height: 18),
-                                _ProfileDetailsCard(profile: profile),
+                                _ProfileDetailsCard(
+                                  profile: profile,
+                                  profileService: _profileService,
+                                ),
                                 const SizedBox(height: 18),
                                 _ImpactCard(
                                   title: 'Il tuo impatto',
@@ -575,13 +578,235 @@ class _HeroBadge extends StatelessWidget {
   }
 }
 
-class _ProfileDetailsCard extends StatelessWidget {
-  const _ProfileDetailsCard({required this.profile});
+class _ProfileDetailsCard extends StatefulWidget {
+  const _ProfileDetailsCard({
+    required this.profile,
+    required this.profileService,
+  });
 
   final FairWaterUserProfile profile;
+  final ProfileService profileService;
+
+  @override
+  State<_ProfileDetailsCard> createState() => _ProfileDetailsCardState();
+}
+
+// Con la spunta "Modifica dati" nome, cognome, telefono e residenza diventano
+// campi modificabili. Referral e date restano in sola lettura.
+class _ProfileDetailsCardState extends State<_ProfileDetailsCard> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _firstName;
+  late final TextEditingController _lastName;
+  late final TextEditingController _phone;
+  late final TextEditingController _residence;
+  bool _editing = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _firstName = TextEditingController();
+    _lastName = TextEditingController();
+    _phone = TextEditingController();
+    _residence = TextEditingController();
+    _fillFromProfile();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProfileDetailsCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_editing) {
+      _fillFromProfile();
+    }
+  }
+
+  @override
+  void dispose() {
+    _firstName.dispose();
+    _lastName.dispose();
+    _phone.dispose();
+    _residence.dispose();
+    super.dispose();
+  }
+
+  void _fillFromProfile() {
+    final profile = widget.profile;
+    var first = profile.firstName;
+    var last = profile.lastName;
+    if (first.isEmpty && last.isEmpty && profile.fullName.isNotEmpty) {
+      final parts = profile.fullName.split(' ');
+      first = parts.first;
+      last = parts.skip(1).join(' ');
+    }
+    _firstName.text = first;
+    _lastName.text = last;
+    _phone.text = profile.phone;
+    _residence.text = profile.residence;
+  }
+
+  void _setEditing(bool value) {
+    setState(() {
+      _editing = value;
+      if (!value) {
+        _fillFromProfile();
+      }
+    });
+  }
+
+  Future<void> _save() async {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    setState(() => _saving = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await widget.profileService.updateProfileDetails(
+        uid: widget.profile.uid,
+        firstName: _firstName.text,
+        lastName: _lastName.text,
+        phone: _phone.text,
+        residence: _residence.text,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _editing = false;
+      });
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Dati del profilo aggiornati.')),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _saving = false);
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Non riesco a salvare i dati in questo momento.'),
+        ),
+      );
+    }
+  }
+
+  InputDecoration _fieldDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, size: 18, color: _kProfilePrimaryDark),
+      filled: true,
+      fillColor: Colors.white,
+      isDense: true,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFE4ECF4)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFE4ECF4)),
+      ),
+    );
+  }
+
+  Widget _buildEditForm() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: _firstName,
+            textCapitalization: TextCapitalization.words,
+            autofillHints: const [AutofillHints.givenName],
+            decoration: _fieldDecoration('Nome', Icons.badge_rounded),
+            validator: (value) => (value ?? '').trim().isEmpty
+                ? 'Inserisci il tuo nome.'
+                : null,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _lastName,
+            textCapitalization: TextCapitalization.words,
+            autofillHints: const [AutofillHints.familyName],
+            decoration: _fieldDecoration('Cognome', Icons.badge_outlined),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _phone,
+            keyboardType: TextInputType.phone,
+            autofillHints: const [AutofillHints.telephoneNumber],
+            decoration: _fieldDecoration('Telefono', Icons.phone_rounded),
+            validator: (value) {
+              final phone = (value ?? '').trim();
+              if (phone.isEmpty) {
+                return null;
+              }
+              final valid = RegExp(r'^\+?[0-9 ]{6,20}$').hasMatch(phone);
+              return valid ? null : 'Controlla il numero di telefono.';
+            },
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _residence,
+            textCapitalization: TextCapitalization.words,
+            autofillHints: const [AutofillHints.addressCity],
+            decoration: _fieldDecoration('Residenza', Icons.home_rounded),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: _saving ? null : () => _setEditing(false),
+                child: const Text('Annulla'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: _saving ? null : _save,
+                style: FilledButton.styleFrom(
+                  backgroundColor: _kProfilePrimaryDark,
+                ),
+                child: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Salva'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final profile = widget.profile;
+    final readOnlyPills = [
+      _ProfileInfoPill(
+        icon: Icons.card_giftcard_rounded,
+        label: 'Referral',
+        value: profile.referralCode.isEmpty
+            ? 'Nessun codice'
+            : profile.referralCode,
+      ),
+      _ProfileInfoPill(
+        icon: Icons.calendar_month_rounded,
+        label: 'Membro dal',
+        value: _formatDate(profile.createdAt),
+      ),
+      _ProfileInfoPill(
+        icon: Icons.water_drop_rounded,
+        label: 'Borraccia attiva dal',
+        value: _formatDate(profile.bottleOwnerSince),
+      ),
+    ];
+
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -590,47 +815,67 @@ class _ProfileDetailsCard extends StatelessWidget {
             title: 'Dati profilo',
             subtitle: 'Le informazioni principali del tuo account FairWater.',
           ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _ProfileInfoPill(
-                icon: Icons.badge_rounded,
-                label: 'Nome',
-                value: profile.fullName,
-              ),
-              _ProfileInfoPill(
-                icon: Icons.phone_rounded,
-                label: 'Telefono',
-                value: profile.phone.isEmpty ? 'Non inserito' : profile.phone,
-              ),
-              _ProfileInfoPill(
-                icon: Icons.home_rounded,
-                label: 'Residenza',
-                value: profile.residence.isEmpty
-                    ? 'Non inserita'
-                    : profile.residence,
-              ),
-              _ProfileInfoPill(
-                icon: Icons.card_giftcard_rounded,
-                label: 'Referral',
-                value: profile.referralCode.isEmpty
-                    ? 'Nessun codice'
-                    : profile.referralCode,
-              ),
-              _ProfileInfoPill(
-                icon: Icons.calendar_month_rounded,
-                label: 'Membro dal',
-                value: _formatDate(profile.createdAt),
-              ),
-              _ProfileInfoPill(
-                icon: Icons.water_drop_rounded,
-                label: 'Borraccia attiva dal',
-                value: _formatDate(profile.bottleOwnerSince),
-              ),
-            ],
+          const SizedBox(height: 10),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: _saving ? null : () => _setEditing(!_editing),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Checkbox(
+                  value: _editing,
+                  activeColor: _kProfilePrimaryDark,
+                  onChanged: _saving
+                      ? null
+                      : (value) => _setEditing(value ?? false),
+                ),
+                const Text(
+                  'Modifica dati',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _kProfileInk,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
           ),
+          const SizedBox(height: 10),
+          if (_editing) ...[
+            _buildEditForm(),
+            const SizedBox(height: 18),
+            Text(
+              'Referral e date non si possono modificare.',
+              style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade500),
+            ),
+            const SizedBox(height: 10),
+            Wrap(spacing: 12, runSpacing: 12, children: readOnlyPills),
+          ] else
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _ProfileInfoPill(
+                  icon: Icons.badge_rounded,
+                  label: 'Nome',
+                  value: profile.fullName,
+                ),
+                _ProfileInfoPill(
+                  icon: Icons.phone_rounded,
+                  label: 'Telefono',
+                  value: profile.phone.isEmpty ? 'Non inserito' : profile.phone,
+                ),
+                _ProfileInfoPill(
+                  icon: Icons.home_rounded,
+                  label: 'Residenza',
+                  value: profile.residence.isEmpty
+                      ? 'Non inserita'
+                      : profile.residence,
+                ),
+                ...readOnlyPills,
+              ],
+            ),
         ],
       ),
     );
