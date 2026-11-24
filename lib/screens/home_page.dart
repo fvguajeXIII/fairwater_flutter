@@ -813,17 +813,23 @@ class _RefillSpotCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: AppColors.surfaceAlt,
-                ),
-                child: const Icon(
-                  Icons.storefront_rounded,
-                  color: _kPrimaryDark,
-                  size: 24,
+              _BrandAvatar(
+                size: 48,
+                radius: 16,
+                logoUrl: bar.logoUrl,
+                asset: _bundledLogoFor(bar.id, bar.name),
+                fallback: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: AppColors.surfaceAlt,
+                  ),
+                  child: const Icon(
+                    Icons.storefront_rounded,
+                    color: _kPrimaryDark,
+                    size: 24,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -987,17 +993,23 @@ class _SponsorCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: AppColors.surfaceAlt,
-                ),
-                child: const Icon(
-                  Icons.handshake_rounded,
-                  color: _kPrimaryDark,
-                  size: 24,
+              _BrandAvatar(
+                size: 48,
+                radius: 16,
+                logoUrl: sponsor.logoUrl,
+                asset: _bundledLogoFor(sponsor.id, sponsor.name),
+                fallback: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: AppColors.surfaceAlt,
+                  ),
+                  child: const Icon(
+                    Icons.handshake_rounded,
+                    color: _kPrimaryDark,
+                    size: 24,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1780,20 +1792,26 @@ class _BarCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [_kPrimary, _kPrimaryDark],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              _BrandAvatar(
+                size: 54,
+                radius: 18,
+                logoUrl: view.bar.logoUrl,
+                asset: _bundledLogoFor(view.bar.id, view.bar.name),
+                fallback: Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [_kPrimary, _kPrimaryDark],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(18),
                   ),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Icon(
-                  Icons.local_cafe_rounded,
-                  color: Colors.white,
+                  child: const Icon(
+                    Icons.local_cafe_rounded,
+                    color: Colors.white,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -2272,6 +2290,82 @@ class _ServiceChip extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Loghi di sponsor e bar inclusi nell'app (assets/loghi/), cercati per id del
+// documento Firestore oppure per nome. Un logo caricato nel campo logoUrl del
+// documento ha la precedenza, così i prossimi sponsor non richiedono un nuovo rilascio.
+const Map<String, String> _bundledLogos = {
+  'davidemanna': 'assets/loghi/davidemanna.png',
+  'imperium': 'assets/loghi/imperium.png',
+  'meravigliafondi': 'assets/loghi/meravigliafondi.png',
+  'barrossoblu': 'assets/loghi/barrossoblu.png',
+};
+
+String? _bundledLogoFor(String id, String name) {
+  final byId = _bundledLogos[id.toLowerCase()];
+  if (byId != null) {
+    return byId;
+  }
+  final key = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  for (final entry in _bundledLogos.entries) {
+    if (key.startsWith(entry.key)) {
+      return entry.value;
+    }
+  }
+  return null;
+}
+
+class _BrandAvatar extends StatelessWidget {
+  const _BrandAvatar({
+    required this.size,
+    required this.radius,
+    required this.logoUrl,
+    required this.asset,
+    required this.fallback,
+  });
+
+  final double size;
+  final double radius;
+  final String logoUrl;
+  final String? asset;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final bundled = asset;
+    if (logoUrl.isEmpty && bundled == null) {
+      return fallback;
+    }
+
+    Widget assetOrFallback() => bundled == null
+        ? fallback
+        : Image.asset(
+            bundled,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => fallback,
+          );
+
+    final image = logoUrl.isNotEmpty
+        ? Image.network(
+            logoUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => assetOrFallback(),
+          )
+        : assetOrFallback();
+
+    return Container(
+      width: size,
+      height: size,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: image,
     );
   }
 }
