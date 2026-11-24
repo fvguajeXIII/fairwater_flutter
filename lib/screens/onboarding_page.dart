@@ -475,21 +475,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Widget build(BuildContext context) {
     final isLastStep = _step == _stepCount - 1;
     final content = SafeArea(
-<<<<<<< HEAD
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-            child: Row(
-              children: [
-                if (_step > 0)
-                  IconButton(
-                    tooltip: 'Indietro',
-                    onPressed: _submitting ? null : _back,
-                    icon: const Icon(
-                      Icons.arrow_back_rounded,
-                      color: AppColors.deepOcean,
-=======
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
@@ -526,7 +511,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       formKey: _formKeys[0],
                       firstName: _firstName,
                       lastName: _lastName,
->>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
                     ),
                     _DetailsStep(
                       formKey: _formKeys[1],
@@ -627,37 +611,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               ),
                               borderRadius: BorderRadius.circular(99),
                             ),
-<<<<<<< HEAD
-                          )
-                        : Text(isLastStep ? 'Vai all’app' : 'Continua'),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                TextButton(
-                  onPressed: _submitting ? null : _openLogin,
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.deepOcean,
-                  ),
-                  child: const Text('Ho già un account'),
-                ),
-                const SizedBox(height: 4),
-                Semantics(
-                  label: 'Pagina ${_step + 1} di $_stepCount',
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      _stepCount,
-                      (index) => AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        curve: Curves.easeOut,
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: index == _step ? 18 : 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: AppColors.ocean.withValues(
-                            alpha: index == _step ? 1 : 0.35,
-=======
->>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
                           ),
                         ),
                       ),
@@ -686,19 +639,13 @@ class _StepShell extends StatelessWidget {
     required this.title,
     required this.body,
     required this.child,
-<<<<<<< HEAD
-=======
     this.showCard = true,
->>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
   });
   final String eyebrow;
   final String title;
   final String body;
   final Widget child;
-<<<<<<< HEAD
-=======
   final bool showCard;
->>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
@@ -708,11 +655,7 @@ class _StepShell extends StatelessWidget {
       children: [
         Text(
           eyebrow.toUpperCase(),
-<<<<<<< HEAD
-          style: TextStyle(
-=======
           style: const TextStyle(
->>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
             color: AppColors.ocean,
             fontSize: 12,
             fontWeight: FontWeight.w900,
@@ -720,16 +663,7 @@ class _StepShell extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-<<<<<<< HEAD
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.headlineLarge?.copyWith(color: AppColors.ink),
-        ),
-=======
         Text(title, style: Theme.of(context).textTheme.headlineLarge),
->>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
         const SizedBox(height: 12),
         Text(
           body,
@@ -763,10 +697,7 @@ class _IntroStep extends StatelessWidget {
     title: 'Da oggi la tua acqua\nla offre il bar.',
     body:
         'Riempi la borraccia nei bar partner, accumula punti e trasforma ogni refill in acqua potabile per chi non ne ha.',
-<<<<<<< HEAD
-=======
     showCard: false,
->>>>>>> 8070cfbedf3a08168425187b9234e547685a8bb6
     child: const SizedBox.shrink(),
   );
 }
