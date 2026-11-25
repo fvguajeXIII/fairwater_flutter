@@ -11,6 +11,7 @@ class SponsorSpot {
     required this.supports,
     required this.socialLinks,
     required this.featured,
+    this.logoUrl = '',
   });
 
   final String id;
@@ -22,6 +23,7 @@ class SponsorSpot {
   final List<String> supports;
   final Map<String, String> socialLinks;
   final bool featured;
+  final String logoUrl;
 
   factory SponsorSpot.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const <String, dynamic>{};
@@ -47,6 +49,7 @@ class SponsorSpot {
           )
         ..removeWhere((key, value) => key.isEmpty || value.isEmpty),
       featured: data['featured'] == true,
+      logoUrl: (data['logoUrl'] as String? ?? '').trim(),
     );
   }
 

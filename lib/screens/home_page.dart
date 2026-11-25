@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -299,7 +300,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   NavigationRailDestination(
                     icon: Icon(Icons.local_drink_rounded),
-                    label: Text('Refill'),
+                    label: Text('Punti Refill'),
                   ),
                   NavigationRailDestination(
                     icon: Icon(Icons.campaign_rounded),
@@ -595,7 +596,7 @@ class _BottomNavBar extends StatelessWidget {
           Expanded(
             child: _NavItem(
               icon: Icons.local_drink_rounded,
-              label: 'Refill',
+              label: 'Punti Refill',
               selected: currentIndex == 1,
               onTap: () => onSelected(1),
             ),
@@ -661,6 +662,9 @@ class _NavItem extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 label,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 9,
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
@@ -787,7 +791,7 @@ class _RefillSpotCard extends StatelessWidget {
         : bar.services;
     final galleryImages = bar.galleryImages.take(6).toList();
     final socialEntries = bar.socialLinks.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+      ..sort((a, b) => _socialOrder(a.key).compareTo(_socialOrder(b.key)));
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
@@ -809,17 +813,23 @@ class _RefillSpotCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: AppColors.surfaceAlt,
-                ),
-                child: const Icon(
-                  Icons.storefront_rounded,
-                  color: _kPrimaryDark,
-                  size: 24,
+              _BrandAvatar(
+                size: 48,
+                radius: 16,
+                logoUrl: bar.logoUrl,
+                asset: _bundledLogoFor(bar.id, bar.name),
+                fallback: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: AppColors.surfaceAlt,
+                  ),
+                  child: const Icon(
+                    Icons.storefront_rounded,
+                    color: _kPrimaryDark,
+                    size: 24,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -915,12 +925,7 @@ class _RefillSpotCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: services
-                .map(
-                  (service) => _InfoChip(
-                    icon: Icons.check_circle_outline_rounded,
-                    label: service,
-                  ),
-                )
+                .map((service) => _ServiceChip(label: service))
                 .toList(),
           ),
           const SizedBox(height: 20),
@@ -966,7 +971,7 @@ class _SponsorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final socialEntries = sponsor.socialLinks.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+      ..sort((a, b) => _socialOrder(a.key).compareTo(_socialOrder(b.key)));
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
@@ -988,17 +993,23 @@ class _SponsorCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: AppColors.surfaceAlt,
-                ),
-                child: const Icon(
-                  Icons.handshake_rounded,
-                  color: _kPrimaryDark,
-                  size: 24,
+              _BrandAvatar(
+                size: 48,
+                radius: 16,
+                logoUrl: sponsor.logoUrl,
+                asset: _bundledLogoFor(sponsor.id, sponsor.name),
+                fallback: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: AppColors.surfaceAlt,
+                  ),
+                  child: const Icon(
+                    Icons.handshake_rounded,
+                    color: _kPrimaryDark,
+                    size: 24,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1049,11 +1060,6 @@ class _SponsorCard extends StatelessWidget {
                       icon: Icons.location_on_outlined,
                       text: sponsor.address,
                     ),
-                    const SizedBox(height: 6),
-                    _RefillDetailRow(
-                      icon: Icons.favorite_outline_rounded,
-                      text: sponsor.contribution,
-                    ),
                   ],
                 ),
               ),
@@ -1074,23 +1080,6 @@ class _SponsorCard extends StatelessWidget {
               sponsor.thankYouMessage,
               style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.ink),
             ),
-          ),
-          const SizedBox(height: 20),
-          const Divider(height: 1, color: AppColors.line),
-          const SizedBox(height: 20),
-          const _SectionHeader(title: 'Contributo al progetto'),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: sponsor.supports
-                .map(
-                  (support) => _InfoChip(
-                    icon: Icons.volunteer_activism_outlined,
-                    label: support,
-                  ),
-                )
-                .toList(),
           ),
           const SizedBox(height: 20),
           const Divider(height: 1, color: AppColors.line),
@@ -1259,6 +1248,10 @@ class _RefillDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Un dato vuoto (per esempio uno sponsor senza indirizzo) non lascia una riga orfana.
+    if (text.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1801,20 +1794,26 @@ class _BarCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [_kPrimary, _kPrimaryDark],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              _BrandAvatar(
+                size: 54,
+                radius: 18,
+                logoUrl: view.bar.logoUrl,
+                asset: _bundledLogoFor(view.bar.id, view.bar.name),
+                fallback: Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [_kPrimary, _kPrimaryDark],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(18),
                   ),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Icon(
-                  Icons.local_cafe_rounded,
-                  color: Colors.white,
+                  child: const Icon(
+                    Icons.local_cafe_rounded,
+                    color: Colors.white,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -2191,16 +2190,184 @@ class _InfoChip extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: AppColors.slate),
           const SizedBox(width: 6),
+          // Flexible: un testo lungo (per esempio gli orari) va a capo invece di uscire dal chip.
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.ink,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Servizi con un marchio riconoscibile: il chip mostra il logo accanto al nome.
+// I file stanno in assets/servizi/ (vedi il LEGGIMI della cartella). Se un file manca,
+// al posto del logo compare un'icona, così la scheda del bar resta leggibile.
+class _ServiceBrand {
+  const _ServiceBrand(this.keyword, this.asset, this.fallbackIcon);
+
+  final String keyword;
+  final String asset;
+  final IconData fallbackIcon;
+}
+
+const List<_ServiceBrand> _serviceBrands = [
+  _ServiceBrand(
+    'superenalotto',
+    'assets/servizi/superenalotto.png',
+    Icons.confirmation_number_outlined,
+  ),
+  _ServiceBrand(
+    'mooney',
+    'assets/servizi/mooney.png',
+    Icons.payments_outlined,
+  ),
+  _ServiceBrand(
+    'amazon',
+    'assets/servizi/amazon.png',
+    FontAwesomeIcons.amazon,
+  ),
+];
+
+_ServiceBrand? _brandForService(String service) {
+  final normalized = service.toLowerCase().replaceAll(' ', '');
+  for (final brand in _serviceBrands) {
+    if (normalized.contains(brand.keyword)) {
+      return brand;
+    }
+  }
+  return null;
+}
+
+class _ServiceChip extends StatelessWidget {
+  const _ServiceChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final brand = _brandForService(label);
+    if (brand == null) {
+      return _InfoChip(icon: Icons.check_circle_outline_rounded, label: label);
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 6, 12, 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 22,
+            child: Image.asset(
+              brand.asset,
+              height: 22,
+              fit: BoxFit.contain,
+              semanticLabel: label,
+              errorBuilder: (context, error, stackTrace) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Icon(brand.fallbackIcon, size: 15, color: AppColors.slate),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               color: AppColors.ink,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+// Loghi di sponsor e bar inclusi nell'app (assets/loghi/), cercati per id del
+// documento Firestore oppure per nome. Un logo caricato nel campo logoUrl del
+// documento ha la precedenza, così i prossimi sponsor non richiedono un nuovo rilascio.
+const Map<String, String> _bundledLogos = {
+  'davidemanna': 'assets/loghi/davidemanna.png',
+  'imperium': 'assets/loghi/imperium.png',
+  'meravigliafondi': 'assets/loghi/meravigliafondi.png',
+  'barrossoblu': 'assets/loghi/barrossoblu.png',
+};
+
+String? _bundledLogoFor(String id, String name) {
+  final byId = _bundledLogos[id.toLowerCase()];
+  if (byId != null) {
+    return byId;
+  }
+  final key = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  for (final entry in _bundledLogos.entries) {
+    if (key.startsWith(entry.key)) {
+      return entry.value;
+    }
+  }
+  return null;
+}
+
+class _BrandAvatar extends StatelessWidget {
+  const _BrandAvatar({
+    required this.size,
+    required this.radius,
+    required this.logoUrl,
+    required this.asset,
+    required this.fallback,
+  });
+
+  final double size;
+  final double radius;
+  final String logoUrl;
+  final String? asset;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final bundled = asset;
+    if (logoUrl.isEmpty && bundled == null) {
+      return fallback;
+    }
+
+    Widget assetOrFallback() => bundled == null
+        ? fallback
+        : Image.asset(
+            bundled,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => fallback,
+          );
+
+    final image = logoUrl.isNotEmpty
+        ? Image.network(
+            logoUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => assetOrFallback(),
+          )
+        : assetOrFallback();
+
+    return Container(
+      width: size,
+      height: size,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: image,
     );
   }
 }
@@ -2339,24 +2506,63 @@ String _socialLabel(String key) {
       return 'Facebook';
     case 'tiktok':
       return 'TikTok';
+    case 'linkedin':
+      return 'LinkedIn';
+    case 'youtube':
+      return 'YouTube';
+    case 'whatsapp':
+      return 'WhatsApp';
+    case 'x':
+    case 'twitter':
+      return 'X';
     case 'website':
+    case 'sito':
       return 'Sito web';
     default:
       return key;
   }
 }
 
+// Icone dei social dal pacchetto Font Awesome (icone dei marchi, licenza CC BY 4.0).
 IconData _socialIcon(String key) {
   switch (key.toLowerCase()) {
     case 'instagram':
-      return Icons.camera_alt_rounded;
+      return FontAwesomeIcons.instagram;
     case 'facebook':
-      return Icons.thumb_up_alt_rounded;
+      return FontAwesomeIcons.facebook;
     case 'tiktok':
-      return Icons.music_note_rounded;
+      return FontAwesomeIcons.tiktok;
+    case 'linkedin':
+      return FontAwesomeIcons.linkedin;
+    case 'youtube':
+      return FontAwesomeIcons.youtube;
+    case 'whatsapp':
+      return FontAwesomeIcons.whatsapp;
+    case 'x':
+    case 'twitter':
+      return FontAwesomeIcons.xTwitter;
     case 'website':
+    case 'sito':
       return Icons.language_rounded;
     default:
       return Icons.open_in_new_rounded;
   }
+}
+
+// Ordine dei social nelle schede: prima Instagram e Facebook, il sito web per ultimo.
+int _socialOrder(String key) {
+  const order = [
+    'instagram',
+    'facebook',
+    'tiktok',
+    'linkedin',
+    'youtube',
+    'whatsapp',
+    'x',
+    'twitter',
+    'website',
+    'sito',
+  ];
+  final index = order.indexOf(key.toLowerCase());
+  return index == -1 ? order.length : index;
 }

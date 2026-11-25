@@ -16,6 +16,7 @@ class BarSpot {
     required this.featured,
     this.postalCode = '',
     this.googlePlaceId = '',
+    this.logoUrl = '',
   });
 
   final String id;
@@ -31,6 +32,7 @@ class BarSpot {
   final bool featured;
   final String postalCode;
   final String googlePlaceId;
+  final String logoUrl;
 
   factory BarSpot.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const <String, dynamic>{};
@@ -68,6 +70,7 @@ class BarSpot {
       featured: data['featured'] == true,
       postalCode: (data['postalCode'] as String? ?? '').trim(),
       googlePlaceId: (data['googlePlaceId'] as String? ?? '').trim(),
+      logoUrl: (data['logoUrl'] as String? ?? '').trim(),
     );
   }
 
