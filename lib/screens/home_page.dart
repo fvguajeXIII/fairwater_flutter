@@ -2347,6 +2347,7 @@ class _BrandAvatar extends StatelessWidget {
         : Image.asset(
             bundled,
             fit: BoxFit.cover,
+            filterQuality: FilterQuality.medium,
             errorBuilder: (context, error, stackTrace) => fallback,
           );
 
@@ -2354,20 +2355,33 @@ class _BrandAvatar extends StatelessWidget {
         ? Image.network(
             logoUrl,
             fit: BoxFit.cover,
+            filterQuality: FilterQuality.medium,
             errorBuilder: (context, error, stackTrace) => assetOrFallback(),
           )
         : assetOrFallback();
 
-    return Container(
-      width: size,
-      height: size,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: AppColors.border),
+    // Il bordo va disegnato sopra il logo: se sta sotto, gli angoli
+    // quadrati dell'immagine lo coprono e restano visibili solo i tratti
+    // dritti, senza le curve agli angoli.
+    final corners = BorderRadius.circular(radius);
+    return SizedBox.square(
+      dimension: size,
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: ShapeDecoration(
+          shape: RoundedRectangleBorder(
+            borderRadius: corners,
+            side: const BorderSide(color: Color(0x290B2240)),
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: corners,
+          child: ColoredBox(
+            color: Colors.white,
+            child: SizedBox.expand(child: image),
+          ),
+        ),
       ),
-      child: image,
     );
   }
 }
