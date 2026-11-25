@@ -2218,7 +2218,7 @@ class _ServiceBrand {
   final IconData fallbackIcon;
 }
 
-const List<_ServiceBrand> _serviceBrands = [
+final List<_ServiceBrand> _serviceBrands = [
   _ServiceBrand(
     'superenalotto',
     'assets/servizi/superenalotto.png',
@@ -2232,7 +2232,7 @@ const List<_ServiceBrand> _serviceBrands = [
   _ServiceBrand(
     'amazon',
     'assets/servizi/amazon.png',
-    FontAwesomeIcons.amazon,
+    FontAwesomeIcons.amazon.data,
   ),
 ];
 
@@ -2527,20 +2527,20 @@ String _socialLabel(String key) {
 IconData _socialIcon(String key) {
   switch (key.toLowerCase()) {
     case 'instagram':
-      return FontAwesomeIcons.instagram;
+      return FontAwesomeIcons.instagram.data;
     case 'facebook':
-      return FontAwesomeIcons.facebook;
+      return FontAwesomeIcons.facebook.data;
     case 'tiktok':
-      return FontAwesomeIcons.tiktok;
+      return FontAwesomeIcons.tiktok.data;
     case 'linkedin':
-      return FontAwesomeIcons.linkedin;
+      return FontAwesomeIcons.linkedin.data;
     case 'youtube':
-      return FontAwesomeIcons.youtube;
+      return FontAwesomeIcons.youtube.data;
     case 'whatsapp':
-      return FontAwesomeIcons.whatsapp;
+      return FontAwesomeIcons.whatsapp.data;
     case 'x':
     case 'twitter':
-      return FontAwesomeIcons.xTwitter;
+      return FontAwesomeIcons.xTwitter.data;
     case 'website':
     case 'sito':
       return Icons.language_rounded;
