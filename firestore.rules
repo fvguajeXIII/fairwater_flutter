@@ -63,16 +63,27 @@ service cloud.firestore {
         request.resource.data.status == 'active'
       );
 
+      // L'utente può cambiare solo i propri dati anagrafici e la foto.
+      // Prima la regola confrontava campo per campo (roles, refillCount,
+      // lastRefillAt, lastRefillerUid…): se uno di quei campi mancava nel
+      // documento, per esempio lastRefillAt per chi non ha ancora fatto un
+      // refill, il confronto andava in errore e ogni salvataggio veniva
+      // rifiutato. Con l'elenco dei campi ammessi non conta quali campi
+      // esistono, e ruoli, contatori e date restano protetti lo stesso.
       allow update: if isAdmin() || (
         isSelf(userId) &&
-        request.resource.data.roles == resource.data.roles &&
-        request.resource.data.accountType == resource.data.accountType &&
-        request.resource.data.status == resource.data.status &&
-        request.resource.data.managedRefillPointIds == resource.data.managedRefillPointIds &&
-        request.resource.data.managedSponsorIds == resource.data.managedSponsorIds &&
-        request.resource.data.refillCount == resource.data.refillCount &&
-        request.resource.data.lastRefillAt == resource.data.lastRefillAt &&
-        request.resource.data.lastRefillerUid == resource.data.lastRefillerUid
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'firstName',
+          'lastName',
+          'displayName',
+          'phone',
+          'residence',
+          'photoBase64',
+          'photoUrl',
+          'email',
+          'provider',
+          'updatedAt'
+        ])
       );
 
       allow delete: if false;
