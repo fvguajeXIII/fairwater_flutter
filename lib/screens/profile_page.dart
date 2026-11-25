@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -675,14 +676,21 @@ class _ProfileDetailsCardState extends State<_ProfileDetailsCard> {
       messenger.showSnackBar(
         const SnackBar(content: Text('Dati del profilo aggiornati.')),
       );
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Salvataggio dati profilo non riuscito: $error');
       if (!mounted) {
         return;
       }
       setState(() => _saving = false);
+      final code = error is FirebaseException ? error.code : '';
+      final message = code == 'permission-denied'
+          ? 'Il database non ha accettato la modifica. Riprova più tardi.'
+          : code == 'unavailable'
+              ? 'Connessione assente: controlla la rete e riprova.'
+              : 'Non riesco a salvare i dati in questo momento.';
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Non riesco a salvare i dati in questo momento.'),
+        SnackBar(
+          content: Text(code.isEmpty ? message : '$message ($code)'),
         ),
       );
     }
