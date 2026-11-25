@@ -1187,6 +1187,8 @@ class _GalleryImage extends StatelessWidget {
     return Image.network(
       imageUrl,
       fit: BoxFit.cover,
+      // Su web usa un <img> HTML, che non richiede CORS sul bucket.
+      webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) {
           return child;
